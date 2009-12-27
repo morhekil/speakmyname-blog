@@ -1,0 +1,153 @@
+--- 
+wordpress_id: 68
+title: Long-running MySQL queries may bring you down in sudden ways
+wordpress_url: http://speakmy.name/?p=68
+permalink: /2008/11/long-running-mysql-queries-may-bring-you-down/
+layout: post
+excerpt: |-
+    Time to time I help my friends with system configuration and other "wtf? it worked yesterday!" kind of issues. One of them runs a thematic *torrent tracker* that has a certain popularity and medium-sized community around it. The tracker itself is based on a heavily modified *TBDev code* with some performance fixes and functional additions, and it was forked so long ago that I'm not even sure how closely it relates to the *official TBDev branch* now. And these guys have about 30,000 registered users stacking up to 100,000 simultaneous upload/download activities.
+
+    But that was all quite irrelevant, just to give a broad picture. A couple of monthes ago this tracker was upgraded to the second server - it was running on a single server before that has started to choke. And after the upgrade everything was running fine and fast with a plenty of extra resources to spare until yesterday, when this guy came to me with the words: "Damn, man, looks like we already need yet another server, everything is hell slow and just dying here".
+
+    Of course, my first reaction was "WTF?". They were running happily last week, and suddenly - overloaded. Hell no, this stuff just never happens.
+---
+
+Time to time I help my friends with system configuration and other "wtf? it worked yesterday!" kind of issues. One of them runs a thematic *torrent tracker* that has a certain popularity and medium-sized community around it. The tracker itself is based on a heavily modified *TBDev code* with some performance fixes and functional additions, and it was forked so long ago that I'm not even sure how closely it relates to the *official TBDev branch* now. And these guys have about 30,000 registered users stacking up to 100,000 simultaneous upload/download activities.
+
+But that was all quite irrelevant, just to give a broad picture. A couple of monthes ago this tracker was upgraded to the second server - it was running on a single server before that has started to choke. And after the upgrade everything was running fine and fast with a plenty of extra resources to spare until yesterday, when this guy came to me with the words: "Damn, man, looks like we already need yet another server, everything is hell slow and just dying here".
+
+Of course, my first reaction was "WTF?". They were running happily last week, and suddenly - overloaded. Hell no, this stuff just never happens.
+
+So I've asked him if they were making any changes to the code recently - and yes, they did add some stuff. I told him to revert all their changes and come back tomorrow if the situation failed to improve.
+
+Well, it's an imperfect and troublesome world, and of course - today he was back and everything was still bad. So I had to get dirty and look into things myself to figure out what's going on.
+
+I'd like to give a brief overview of *issues with a torrent tracker* here, for those who are out of the loop. The main point of entry (and the source of load) is the announce script, that is hammered by users - it is the very script that gets pulled every time anyone's *torrent client* published his download/upload stats to the server or starts/stops downloading any torrent. The second source of load is scrape script - this one is used by torrent client to get information about the number of seeds and peers in the swarm, that is the number of full sources and other downloaders for the file.
+
+First of all I've checked *lighttpd's status* screen and it wasn't good:
+
+{% highlight text %}
+legend
+. = connect, C = close, E = hard error
+r = read, R = read-POST, W = write, h = handle-request
+q = request-start,  Q = request-end
+s = response-start, S = response-end
+1024 connections
+hhhhhhhhhhhhWhhhhhhhhhrhhhWhhhhhhhhhhhhhhhhhhhhrhh
+hhhhhhhhhhhhhhhrhhhhhhhhhhhhhhrrhhhhhhhhhhhhhhhhhh
+hhhrhhhWhhhhWhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhWhhh
+hhhhhrhhhhhhrhhhhhhhhhhhhhhrhhhhhhhhhhhhhhhhhhhrhh
+hhWhhhrhhhhhWrhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhrh
+hhhhhhhhhhhhrhhhhhhWhhhhhrhhhhhhhrhhhhhhhhrhhhhhhh
+hhhhhhhhhhhhrhhhhhhhhhhhhhhrhhhhhhhhhhhhhhrhhhhhhh
+hhhhhhhhhhhhrhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhh
+hhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhh
+hhhhhhhhhhhhhhhhhhhhhhhhhhrhrhhhhhhhhhhhhhhhhhhhhh
+hhhhhhhhhhhhhhhhhhrhhhhhhhhhhhhhhhWhhhhhhhhhhhhhrh
+hhhhhrhrhhrhhhhhhhhhhhhhhhhhhrhhhrhWhhhrhhhhhrhhhh
+hhhhhhhhhhhhhhhrhhhrhhhhhhhhhhhhhhhrhhhhrhhhhhhhhh
+hhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhrhhhrhhhhhhhhhhh
+hhhhhhhhhhhhhhrhhhhhhhhhhhhhhhhhrhhhhhhhhhhhhhhhhh
+rhhhhhrhhhhhhhhhhhhhrhhhhhhhhrhhhhhhhhhhhhhhrhhhrh
+rhhhhhhhhhhhhhrhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhh
+hhhhhhhhhhhhhhhrhhhhhhhhhhhhhhhhhhhhhhhrhhhhhhhhhh
+hhhhhhhhrhrhhhhrhhhhhhhhhhhhhhhhhhhhhhrhrhhhhhhhhh
+hhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhrhhhhh
+rhrhhhhhhhrhhhhhhhhhhhhh
+{% endhighlight %}
+
+What we can see here is a huge and serious lockup. Each _h_ character means a request awaiting to be processed by *php backend*, and there's no way the backends can live up to such load. Also under normal conditions the number of processes under *fastcgi*'s care is around the same as read/write processes, as processing is quite fast and reads/writes are usually slow. This status screen so overflown with handlers just painfully cries "things are wrong here".
+
+So my first suspicions were on two files mentioned before - announce and scrape scripts, as a hiccup in any of them can easily storm up the resources usage, slow down the processing and bring the server to it's knees, giving that very status screen that we see above. But thorough investigation gave no results - the scripts were innocent and certainly not the direct sources of problems.
+
+That was strange. Surprised and interested I've started to dig deeper. Where else can we see what's being processed and for how long? At *MySQL processes list*. Ok, let's dig in there.
+
+{% highlight sql %}
+| Command | State          | Info
+| Query   | Copying to     | SELECT t1.id, t1.name, t1.size, t1.leechers, t2.to_go FROM torrents AS t1, peers AS t2
+|           tmp table      | WHERE t2.torrent = t1.id AND seeders =0 AND leechers &gt;0 AND t1.access =1
+|                          | ORDER BY t1.leechers DESC
+|                          |
+| Query   | Locked         | SELECT seeder, peer_id, ip, port, uploaded, downloaded, userid, uploadoffset, downloadoffset
+|                          | FROM peers WHERE torrent = 2950 AND connectable = 'yes'
+|                          |
+| Query   | Locked         | SELECT seeder, peer_id, ip, port, uploaded, downloaded, userid, uploadoffset, downloadoffset
+|                          | FROM peers WHERE torrent = 9779 AND connectable = 'yes'
+|                          |
+| Query   | Locked         | SELECT seeder, peer_id, ip, port, uploaded, downloaded, userid, uploadoffset, downloadoffset
+|                          | FROM peers WHERE torrent = 8875 AND connectable = 'yes'
+|                          |
+{% endhighlight %}
+_....and a lot of other locked queries was there..._
+
+Well, what would you think - here comes the trouble! I've left out unnecessary info from the process list so you can clearly see our victim - it's in the first line. That heavy query joining two tables was locking *peers* and *torrents* tables on execution to copy it's data to the temp table for processing. And these two table are also used to process every announce (remember that most-heavily-hammered script I've mentioned before?)
+
+So even as this long query was executed on a page with much lower hits rate, then announce - it was main index page - the number of hits was just enough to make announces stack up in the queue and overwhelm *backend fastcgi processes*.
+
+Let's take a closer look at this query with "EXPLAIN statement":http://dev.mysql.com/doc/refman/5.0/en/using-explain.html:
+
+{% highlight sql %}
+EXPLAIN SELECT t1.id, t1.name, t1.size, t1.leechers, t2.to_go
+    FROM torrents AS t1, peers AS t2
+    WHERE t2.torrent = t1.id AND seeders =0 AND leechers &gt;0 AND t1.access =1
+    ORDER BY t1.leechers DESCG
+*************************** 1. row ***************************
+           id: 1
+  select_type: SIMPLE
+        table: t2
+         type: ALL
+possible_keys: torrent_peer_id,connectable
+          key: NULL
+      key_len: NULL
+          ref: NULL
+         rows: 83736
+        Extra: Using temporary; Using filesort
+*************************** 2. row ***************************
+           id: 1
+  select_type: SIMPLE
+        table: t1
+         type: eq_ref
+possible_keys: PRIMARY,access
+          key: PRIMARY
+      key_len: 4
+          ref: arru_tracker.t2.torrent
+         rows: 1
+        Extra: Using where
+2 rows in set (0.00 sec)
+{% endhighlight %}
+
+The first row here confirms our suspicions that this piece of code is evil. We can see three things here:
+<ol>
+	<li>*No keys* are used in the query.</li>
+	<li>*Temporary table* is used to complete the query.</li>
+	<li>*Filesort* is used to complete the query.</li>
+</ol>
+Each of them is bad. Three of them together are ten times as bad as each one. And even users hit this query less often then other scripts - it locks up processing of the more frequent scripts and causes a chain reaction through the whole application and server.
+
+So, just to confirm it I've disabled the block of code and of course - a minute later the server was back to normal, a number of running processes dropped and everything was fine and shiny again.
+
+Here is the *lighttpd's status* screen after the fix, so you can compare it to the old (bad) one:
+
+{% highlight text %}
+legend
+. = connect, C = close, E = hard error
+r = read, R = read-POST, W = write, h = handle-request
+q = request-start,  Q = request-end
+s = response-start, S = response-end
+242 connections
+rrhhhrrrrhWhrhrWrrhrWrrhrrhrrrhrhrhhrhrhrhhrWhrhrr
+hrrWWrWrrhhhhrrWrrrhrWrrrhrrrrhrrrhrrrrhrrrWrWrhrr
+rrhrhrrhrhhhrrhrhhhWrrhWrrhrrrrrrrrrhrrhWrhhrrrrhh
+rrWrrhrrrrrWhrrrrhhrrrhrhrrhhrrrhhhrrrhhrrrhrrrrWr
+rhrrrhrhhrhrhhrrrhrhrhhrrhrhrrhhhhhhhhhhrr
+{% endhighlight %}
+
+That's how the status should like when it's normal. You can see a certain number of handling processes, but not nearly as much as before, and there're just as many reads and writes.
+
+But we've just disabled the code block that was locking us up. What can be done to -have the cake and eat it- have this feature and let the server live with it?
+
+1. *Cache it*. Cache it, cache that, cache all of them. Alpha and omega of performance issues. If you need a heavy query - run in once in a while, cache the result and display the cache. No lock ups, no problems.
+
+2. *Optimize it*. Looks at the EXPLAIN results once again - no keys are being used, all torrents table gets read. It is bad. It means that your indexes are not efficient enough or your query is wrong and doesn't use them for good. Review your indexes, let the query use them - and it will speed up the processing dramatically.
+
+But in any case - another problem was solved, another server was saved, another day was made. See you next time.

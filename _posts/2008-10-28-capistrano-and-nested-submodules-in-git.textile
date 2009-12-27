@@ -1,0 +1,49 @@
+--- 
+wordpress_id: 54
+title: Capistrano and nested submodules in Git
+wordpress_url: http://speakmy.name/?p=54
+permalink: /2008/10/capistrano-and-nested-submodules-in-git/
+layout: post
+excerpt: |-
+    So let's say you have some big codebase in *Git repository*. Or maybe not even that big, but with a complex dependency added in as a "submodule":http://book.git-scm.com/5_submodules.html. And this submodule is complex enough that it makes sence for it to reference other project and *include them as submodules*, too. Sounds too complex? Well, maybe it is, but there're certain situations when this workflow is plausible, especially if your upstream uses *Subversion instead of Git*. "Symfony":http://www.symfony-project.com comes to mind as an example - huge framework with a number of dependencies (look at version 1.2) that uses svn for development.
+
+    You've found a good guy at GitHub doing *svn clone* of upstream's repository periodically, you've pulled his git repo as a submodule, initialized and updates submodules and things look good so far. Feeling lucky, you're dropping in you Capistrano config, customizing it with your server and repository details, and finally typing your magical "cap deploy". Still feeling lucky and going to grab that hard-earned cup of coffee? Well, hold on there for a minute and pay some attention. Whooops! What's this? That bloody thing fails.
+
+    The problem here is that Capistrano by default (by that I mean when you have :git_enable_submodules settings in your config file) only issues "git submodule init &amp;&amp; git submodule update" at the root of your checked out repository, so if you application depends on any submodules down the tree to be initialized, too - well, "Screeewed!" (C) GoW2
+---
+
+So let's say you have some big codebase in *Git repository*. Or maybe not even that big, but with a complex dependency added in as a "submodule":http://book.git-scm.com/5_submodules.html. And this submodule is complex enough that it makes sence for it to reference other project and *include them as submodules*, too. Sounds too complex? Well, maybe it is, but there're certain situations when this workflow is plausible, especially if your upstream uses *Subversion instead of Git*. "Symfony":http://www.symfony-project.com comes to mind as an example - huge framework with a number of dependencies (look at version 1.2) that uses svn for development.
+
+You've found a good guy at GitHub doing *svn clone* of upstream's repository periodically, you've pulled his git repo as a submodule, initialized and updates submodules and things look good so far. Feeling lucky, you're dropping in you Capistrano config, customizing it with your server and repository details, and finally typing your magical "cap deploy". Still feeling lucky and going to grab that hard-earned cup of coffee? Well, hold on there for a minute and pay some attention. Whooops! What's this? That bloody thing fails.
+
+The problem here is that Capistrano by default (by that I mean when you have :git_enable_submodules settings in your config file) only issues "git submodule init &amp;&amp; git submodule update" at the root of your checked out repository, so if you application depends on any submodules down the tree to be initialized, too - well, "Screeewed!" (C) GoW2
+
+Being faced with this very problem earlier today I've thought it's a good theme for a plugin, and so one was born - name is "*capistrano/deepmodules*". So if you want to easily enable this "*deep submodules initialization*" feature in your Capistrano, <a href="http://github.com/morhekil/capistrano-deepmodules/tree/master">head over to GitHub</a> to take a look at the sources or just add GitHub's gems source and install this plugin:
+
+{% highlight bash %}
+$ gem sources -a http://gems.github.com
+$ sudo gem install morhekil-capistrano-deepmodules
+{% endhighlight %}
+
+-_(it looks like GitHub is slow as hell today with building gems, so you may grab your copy <a href="http://morhekil.net/morhekil-capistrano-deepmodules-0.1.gem">at my server</a> until it's finally built by GitHub and available there)._-
+_Nevermind, got it built finally. Looks like I've been bitten by <a href="http://logicalawesome.lighthouseapp.com/projects/8570/tickets/510">this GitHub's bug</a>._
+
+and that's pretty much all you need to do. Just require it at your deployment config:
+
+{% highlight ruby %}
+require 'capistrano/deepmodules'
+{% endhighlight %}
+
+The gem will take care of all the rest automatically. You can delete :git_enable_submodules from your config, the gem pays no attention to it - if you're requiring it you're already saying that you want to *enable submodules*.
+
+And one more detail to pay attention to - at the moment only remote cache strategy is supported by the gem. It means that you MUST add to your config the following line:
+
+{% highlight ruby %}
+set :deploy_via, :remote_cache
+{% endhighlight %}
+
+It enables the remote cache and it's really the thing you want to do anyway - deploying large codebases with a lot of submodules and other stuff is really a troublesome experience if you have no server-side cache of it.
+
+Still, if you're using another strategy and feel like you need this gem to work with it - drop me a note, I'll see what I can do.
+
+Take care, and never ever again forget your *deeply buried submodules*!

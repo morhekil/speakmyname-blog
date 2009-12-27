@@ -1,0 +1,189 @@
+--- 
+wordpress_id: 115
+title: Using acl9 for easy object-based access control
+wordpress_url: http://speakmy.name/?p=115
+permalink: /2009/01/using-acl9-for-easy-object-based-access-control/
+layout: post
+excerpt: |-
+    There's a relatively new player in the town of *role-based access control for Rails* - <a href="http://github.com/be9/acl9">acl9</a> by Oleg Dashevskii. The first look through it's README page may leave a confusingly bitter taste of complexity in your mouth, but don't you worry - it's nice and flexible and easy to use once you get into it.
+
+    acl9 has not only *global user roles* (like _this user has admin role_, and _that user has editor role_), but it also allows you to specify users' *roles over specific objects*. For example, some blog post can have one user with "author" role and another with "editor" role, and these roles can belong to different users over different objects.
+
+    And it's all good but looks a bit too complex for me in the default implementation - all these per-object roles are stored in the database so you have to assign them by calling _user.has_role!(:admin, blog_post)_ and _user.has_role!(:editor, blog_post)_. And if some roles are changed over time - we have to go over the relevant objects and remove/change the roles.
+
+    So let's sprinkle this basic goody with some dynamic pepper to give it just the perfect flavor we need. And by the way I'll show you just how easy it is to modify roles behaviours with acl9 - and that's why I love it.
+---
+
+There's a relatively new player in the town of *role-based access control for Rails* - <a href="http://github.com/be9/acl9">acl9</a> by Oleg Dashevskii. The first look through it's README page may leave a confusingly bitter taste of complexity in your mouth, but don't you worry - it's nice and flexible and easy to use once you get into it.
+
+acl9 has not only *global user roles* (like _this user has admin role_, and _that user has editor role_), but it also allows you to specify users' *roles over specific objects*. For example, some blog post can have one user with "author" role and another with "editor" role, and these roles can belong to different users over different objects.
+
+And it's all good but looks a bit too complex for me in the default implementation - all these per-object roles are stored in the database so you have to assign them by calling _user.has_role!(:admin, blog_post)_ and _user.has_role!(:editor, blog_post)_. And if some roles are changed over time - we have to go over the relevant objects and remove/change the roles.
+
+So let's sprinkle this basic goody with some dynamic pepper to give it just the perfect flavor we need. And by the way I'll show you just how easy it is to modify roles behaviours with acl9 - and that's why I love it.
+
+Let's continue with our blog thing as an example - it looks like blogs are "Hello world" for Rails, so this is cosher way to explain things ;) But to be a bit closer to a real life let's take a real life example - say our blog has comments, and we want to give comments' authors a right to edit/delete their comments for 10 minutes after they've been posted. We'll call this role "owner", and when comment is older then 10 minutes - author loses his ownership over that comment.
+
+I'll skip some boring details of setting up the basic Rails application, adding authentication (be it <a href="http://github.com/technoweenie/restful-authentication">RESTful authentication</a> or <a href="http://github.com/binarylogic/authlogic">AuthLogic</a>) and default authorization with acl9 - just follow any of the relevant wikis or tutorials and you'll be up and running in no time. It should give you User and Role models, and a mapping between them as it is described in acl9 wiki. After that let's create along the way Comment model that we'll be using for our authorization example. Details of the model do not really matter here, so do it any way you're used to.
+
+And we're ready for the real deal now. Do you still remember what we're going to do here? We want to allow our users to edit their comments for 10 minutes only after the posting. So what's in play here? Author (or his id), comment as an object and comment's creation time as the most important thing. And where do we have all these things together? Well, in the comment itself, of course. So it looks logical to delegate ownership verification to the comment object, and by passing current user to the comment let the comment run it's checks and tell us whether it allows this user to do anything with the comment or not.
+
+Sounds good enough to start with, so first of all - let's spec what we want to achieve. We'll call object's method to check for specific role "is_#{role_name}?", so our specs should like the following:
+
+{% highlight ruby %}
+require File.expand_path(File.dirname(__FILE__) + '/../spec_helper')
+describe Comment do
+  before(:each) do
+    @user = Factory(:user)
+    @comment = Factory(:comment, :author => @user)
+  end
+
+  describe "ownership" do
+    it "should be granted to the author upon creation" do
+      @comment.is_owner?(@user).should be_true
+    end
+
+    it "should not be granted to other users" do
+      @comment.is_owner?(Factory(:user)).should be_false
+    end
+
+    it "should be withdrawn from the author after certain time" do
+      @comment.created_at = 11.minutes.ago
+      @comment.is_owner?(@user).should be_false
+    end
+  end
+end
+{% endhighlight %}
+
+I'm using RSpec here to write the specs and <a href="http://github.com/thoughtbot/factory_girl">FactoryGirl</a> with it's <a href="http://github.com/negonicrac/factory_girl_on_rails">Rails plugin</a> to instantiate the user and comment objects (that's what these Factory calls in the specs are for).
+
+Tests will fail now, of course, but as we have our backs covered now - let's move one the implementation itself.
+
+Remember what you've read in acl9's readme? There was one very important phrase:
+<blockquote>All permission checks in Acl9 are boiled down to calls of a single method:
+
+<code>subject.has_role?(role, object)</code></blockquote>
+
+What does it mean? It means that _User#has_role?_ method is the bread and butter of acl9. It's exactly what does the actual checks on the roles and permits or denies access in the end. Let's look at the default implementation of this method:
+
+{% highlight ruby %}
+module Acl9
+  module ModelExtensions
+    module Subject
+      def has_role?(role_name, object = nil)
+        !! if object.nil?
+          self.roles.find_by_name(role_name.to_s) ||
+          self.roles.member?(get_role(role_name, nil))
+        else
+          role = get_role(role_name, object)
+          role && self.roles.exists?(role.id)
+        end
+      end
+    end
+  end
+{% endhighlight %}
+
+As you can see, the method can be called with or without an object. If it's called without any object - global role check kicks in, and that's fine for us - we want to keep this part. But if we're passing some object as the second argument - we want to delegate the checks to that object and let it do the work instead. Talking in specs:
+
+{% highlight ruby %}
+require File.dirname(__FILE__) + '/../spec_helper'
+describe User do
+  describe "acl9 role check" do
+    before(:each) do
+      @user = Factory(:user)
+    end
+
+    it "should pass if it has the global role" do
+      @user.has_role!(:admin)
+      @user.has_role?(:admin).should be_true
+      @user.has_role?(:god).should be_false
+    end
+
+    it "should pass if it has the role on the object" do
+      mock = mock('acl9_object')
+      mock.should_receive(:respond_to?).with(:is_actor?).and_return(true)
+      mock.should_receive(:is_actor?).with(@user).and_return(true)
+      @user.has_role?(:actor, mock).should be_true
+    end
+
+    it "should fail if it has no role on the object" do
+      mock = mock('acl9_object')
+      mock.should_receive(:respond_to?).with(:is_actor?).and_return(true)
+      mock.should_receive(:is_actor?).with(@user).and_return(false)
+      @user.has_role?(:actor, mock).should be_false
+    end
+
+    it "should fail if object has no check method defined for the role" do
+      mock = mock('acl9_object')
+      mock.should_receive(:respond_to?).with(:is_god?).and_return(false)
+      @user.has_role?(:god, mock).should be_false
+    end
+  end
+end
+{% endhighlight %}
+
+So let's overload the defaults with our own _User#has_role?_ method and change the second branch of that conditional in acl9 as follows:
+
+{% highlight ruby %}
+class User < ActiveRecord::Base
+  acts_as_authorization_subject
+
+  def has_role?(role_name, object=nil)
+    !! if object.nil?
+      self.roles.find_by_name(role_name.to_s) ||
+      self.roles.member?(get_role(role_name, nil))
+    else
+      method = "is_#{role_name.to_s}?".to_sym
+      object.respond_to?(method) && object.send(method, self)
+    end
+  end
+
+  #...
+  #other code not related to our task
+  #...
+end
+{% endhighlight %}
+
+Run our specs for the User model - and voila, they pass. It was easy and quick, and we're almost there indeed - we've overloaded default method and we're delegating object-related role checks onto the objects themselves. Let's implement a check for _:owner_ role in the comments now:
+
+{% highlight ruby %}
+class Comment < ActiveRecord::Base
+  acts_as_authorization_object
+
+  def is_owner?(user)
+    user == self.author && self.created_at < 10.minutes.ago
+  end
+end
+{% endhighlight %}
+
+And guess what? The second set of tests passes. We're done - we give :owner role to comment's author initially and we withdraw it 10 minutes later. And this check takes only 1 line in Comment class to work after overloading acl9.
+
+Wonder how to implement access control in the controller itself? It's really easy to do for the usual RESTful controller, here's the example pulled off the real application:
+
+{% highlight ruby %}
+class CommentsController < ApplicationController
+  before_filter :find_commentable
+  before_filter :find_comment, :only => [:show, :edit, :update, :destroy]
+
+  access_control do
+    allow all, :to => [:index, :show]
+    allow logged_in, :to => [:new, :create]
+    allow :owner, :of => :comment, :to => [:edit, :update, :destroy]
+    allow :admin
+  end
+
+  # ...
+  # regular RESTful code
+  # ...
+
+  def find_commentable
+    @commentable = Article.find(params[:article_id]) if params[:article_id]
+  end
+
+  def find_comment
+    @comment = @commentable.comments.find(params[:id])
+  end
+end
+{% endhighlight %}
+
+Got any questions? Great, that's what the comments here are for! Go ahead and ask, and I'll try to answer.

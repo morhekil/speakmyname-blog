@@ -1,0 +1,77 @@
+--- 
+wordpress_id: 173
+title: Use binding methods of prototype.js to keep your code DRY
+wordpress_url: http://speakmy.name/?p=173
+permalink: /2009/03/use-binding-methods-from-prototypejs-to-keep-your-code-dry/
+layout: post
+excerpt: |-
+    There're two awesome methods in <a href="http://prototypejs.org">prototype.js</a> library those are often overlooked by newcomers - <a href="http://prototypejs.org/api/function/bind">Function.bind()</a> and <a href="http://prototypejs.org/api/function#method-bindaseventlistener">Function.bindAsEventListener</a>. These methods are so damn nice that their absense from another awsomeness called Ruby is just driving me crazy every time I stumble upon it.
+
+    But let's take a closer look at why these methods are so useful. First of all, you should familiarize yourself with <a href="http://alternateidea.com/blog/articles/2007/7/18/javascript-scope-and-binding">a concept of binding</a>. The core of it is simple - it allows you to define a function in one context and scope and run it in completely different context. Let me show you almost a real app example.
+---
+
+There're two awesome methods in <a href="http://prototypejs.org">prototype.js</a> library those are often overlooked by newcomers - <a href="http://prototypejs.org/api/function/bind">Function.bind()</a> and <a href="http://prototypejs.org/api/function#method-bindaseventlistener">Function.bindAsEventListener</a>. These methods are so damn nice that their absense from another awsomeness called Ruby is just driving me crazy every time I stumble upon it.
+
+But let's take a closer look at why these methods are so useful. First of all, you should familiarize yourself with <a href="http://alternateidea.com/blog/articles/2007/7/18/javascript-scope-and-binding">a concept of binding</a>. The core of it is simple - it allows you to define a function in one context and scope and run it in completely different context. Let me show you almost a real app example.
+
+Let's say we're starting a couple of similar Highlight effects operating over different elements of the page, and we'd like to cleanup after scriptaculous once the effects are done. How are we going to do it? Something like this should do:
+
+{% highlight javascript %}
+new Effect.Highlight($('target1'), {
+    startcolor: '#ccffcc',
+    afterFinish: function() { $('target1').setStyle({ backgroundColor: null, backgroundImage: null }) }
+    });
+new Effect.Highlight($('target2'), {
+    startcolor: '#aabbcc',
+    restorecolor: 'true',
+    afterFinish: function() { $('target2').setStyle({ backgroundColor: null, backgroundImage: null }) }
+});
+{% endhighlight %}
+
+As you can see, it's a simple example - we're running two effects and then removing background-color and background-image styles left over at their target elements to let our own global CSS styles kick in. But the code is not DRY at all - if we'll ever need to change the cleanup function we'll have to change afterFinish callbacks in both effects. And that's just a trivial example of what can get really messy if we have a lot of targets like this. The situation is also complicated by the fact that afterFinish handler runs outside it's definition scope, so if our targets are dynamic - not just target1 and target2, then we have to somehow pass that data into the handler.
+
+So let's get to binding. In prototype binding methods allow you to define the meaning of <i>this</i> keyword, and also to set the arguments the function will be called with. And it's the latter we're interested in right now.
+
+Let's first rewrite our cleanup code as a function taking the single argument to define it's target:
+{% highlight javascript %}
+var cleanup_func = function(target) { target.setStyle({ backgroundColor: null, backgroundImage: null }) };
+{% endhighlight %}
+
+Short and easy, isn't it? Now we have to pass it to the afterFinish callback, fixing it's argument to the target of our current effect at the same time. We'll use Function.bind() for it, and if you look up it's documentation - you'll see that it takes <i>this</i> object as a first argument, followed by other function's arguments. We don't care about <i>this</i> keyword in our cleanup code, so let's just write it this way:
+
+{% highlight javascript %}
+var cleanup_func = function(target) { target.setStyle({ backgroundColor: null, backgroundImage: null }) };
+
+var target1 = $('target1');
+new Effect.Highlight(target1, {
+    startcolor: '#ccffcc',
+    afterFinish: cleanup_func.bind(this, target1)
+    });
+
+var target1 = $('target2');
+new Effect.Highlight(target2), {
+    startcolor: '#aabbcc',
+    restorecolor: 'true',
+    afterFinish: cleanup_func.bind(this, target2)
+});
+{% endhighlight %}
+
+And that's all. Now if we need to change the cleanup logic in any way - we'll have to change only the definition of cleanup_func. And not only this - but we're also calculating our targets only once, passing them as a ready-made arguments to our callbacks then to save the precious javascript processing time. Not all browsers all lightning fast with Javascript right now, so sometime small optimizations like this can really give you a serious boost in your app.
+
+And one more thing - there's also a similar <a href="http://prototypejs.org/api/function#method-bindaseventlistener">Function.bindAsEventListener</a> method in prototype.js - as you can guess from it's name, it's used when you need to bind a handler for an event to some specific context. You can use it the same way as the regular bindings, just with one important addition - it passes Event object as the first parameter to the function being called. For example:
+
+{% highlight javascript %}
+var contextvar = 1;
+// We're setting foobar function as a handler for onclick event,
+// passing contextvar variable as a parameter to it
+$('mybutton').observe('click', foobar.bindAsEventListener(this, contextvar);
+
+// And here is the function definition - note the first argument there, event.
+// We haven't passed it explicitly - but it was added by Prototype and bindAsEventListener call
+function foobar(event, newvalue) {
+    event.stop();
+    event.element().value = newvalue;
+}
+{% endhighlight %}
+
+And that's all, quite easy.

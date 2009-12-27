@@ -1,0 +1,52 @@
+--- 
+wordpress_id: 112
+title: Custom validation errors in Rails and ActiveRecord
+wordpress_url: http://speakmy.name/?p=112
+permalink: /2009/01/custom-validation-errors-in-rails-and-activerecord/ 
+layout: post
+excerpt: |-
+    Looking around for the way to make custom validation errors for ActiveRecord I've found a number of different solution, including some quite complex ones those rewrite the helper to get required behavior messages. But it seems that the simplest possible way to do it is to rewrite _ActiveRecord::Errors#full_messages_ method.
+
+    The cons of this way is that you keep all standard functionality of ActiveRecord - that means that if you want to provide custom messages only for some validation and keep the old ones for all others, you can easily do it. Just prefix your own messages with '^' character - and they'll be printed without column name in front of them. Other messages will have that name just as usual.
+
+    It's even implemented as a plugin, but I'm not sure if two modified lines are really worth being separated into a plugin. Anyway, if you wish - just grab the plugin from GitHub/RubyForge, and if you don't - you can put the following code into your initializers, it will rewrite ActiveRecord's default method on Rails startup.
+---
+
+Looking around for the way to make custom validation errors for ActiveRecord I've found a number of different solution, including some <a href="http://www.egtheblog.com/?p=10">quite complex ones</a> those rewrite the helper to get required behavior messages. But it seems that the simplest possible way to do it is to rewrite <em>ActiveRecord::Errors#full_messages</em> method.
+
+The cons of this way is that you keep all standard functionality of ActiveRecord - that means that if you want to provide custom messages only for some validation and keep the old ones for all others, you can easily do it. Just prefix your own messages with '^' character - and they'll be printed without column name in front of them. Other messages will have that name just as usual.
+
+It's even implemented as a plugin (<a href="http://github.com/gumayunov/custom-err-msg/tree/master">here</a> is the clone at GitHub, and <a href="http://rubyforge.org/projects/custom-err-msg/">here</a> is the svn original at RubyForge) but I'm not sure if two modified lines are really worth being separated into a plugin. Anyway, if you wish - just grab the plugin from GitHub/RubyForge, and if you don't - you can put the following code into your initializers (something like <em>RAILS_ROOT/config/initializers/active_record_errors.rb</em>), it will rewrite ActiveRecord's default method on Rails startup.
+
+<!--more-->
+
+And if you want to change the prefix from ^ to anything else - just change it in <em>CUSTOM_PREFIX</em> constant there on line 2 (and it doesn't have to be only one character - something like '!!' or '::' will do as well).
+
+{% highlight ruby %}
+class ActiveRecord::Errors
+  CUSTOM_PREFIX = '^'
+
+  def full_messages(options = {})
+    full_messages = []
+
+    @errors.each_key do |attr|
+      @errors[attr].each do |message|
+        next unless message
+
+        if attr == "base"
+          full_messages &lt;&lt; message
+        elsif message.mb_chars[0..(CUSTOM_PREFIX.size-1)] == CUSTOM_PREFIX
+          full_messages &lt;&lt; message.mb_chars[(CUSTOM_PREFIX.size)..-1]
+        else
+          #key = :"activerecord.att.#{@base.class.name.underscore.to_sym}.#{attr}"
+          attr_name = @base.class.human_attribute_name(attr)
+          full_messages &lt;&lt; attr_name + ' ' + message
+        end
+
+      end
+    end
+    full_messages
+  end
+
+end
+{% endhighlight %}

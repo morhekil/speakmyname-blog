@@ -1,0 +1,72 @@
+--- 
+wordpress_id: 106
+title: Action Guide to git submodules (with Rails flavor)
+wordpress_url: http://speakmy.name/?p=106
+permalink: /2009/01/action-guide-to-git-submodules-with-rails-flavor/
+layout: post
+excerpt: |-
+    Sometimes I wonder why git users still use the old ways to manage dependencies for their projects. And when I say "dependencies" I mean things like plugins, not gems - Rails config takes care of gems for us, of course. But really, why bother with old script/install and all these tools like piston, etc, if we have that awesome VCS tool called git, and it has that awesome feature called submodules.
+
+    I'll try to collect in this post current best practices of a submodules workflow and form a "howto" kind of guide, and maybe talk a little about why this thing is so good in the end. So if you're still asking yourself "How shall I track changes in my submodules?" or even (if you're cool and eat your own dog food) "How shall I use the submodule in my app, have it editable/pushable and let others clone the app without any issues?" - read on, you'll find your answers here.
+---
+
+Sometimes I wonder why git users still use the old ways to manage dependencies for their projects. And when I say "dependencies" I mean things like plugins, not gems - Rails config takes care of gems for us, of course. But really, why bother with old script/install and all these tools like piston, etc, if we have that awesome VCS tool called git, and it has that awesome feature called submodules.
+
+I'll try to collect in this post current best practices of a submodules workflow and form a "howto" kind of guide, and maybe talk a little about why this thing is so good in the end. So if you're still asking yourself "How shall I track changes in my submodules?" or even (if you're cool and eat your own dog food) "How shall I use the submodule in my app, have it editable/pushable and let others clone the app without any issues?" - read on, you'll find your answers here.
+
+<h1>Git submodules action guide</h1>
+
+<h2>1. Add new plugin to your app as a submodule</h2>
+<code>$ git submodule add git://github.com/thoughtbot/paperclip.git vendor/plugins/paperclip
+$ git status
+<span style="color: #999999;">...
+#	new file: .gitmodules
+#	new file: vendor/plugins/paperclip
+...</span>
+$ git add .
+$ git commit -m "adding paperclip plugin as a submodule"</code>
+
+<h2>2. Initialize and checkout repository's submodules</h2>
+<code>$ git submodule init
+$ git submodule update</code>
+
+<h2>3. Update submodule and merge in it's latest remote changes</h2>
+<code>$ cd vendor/plugins/paperclip
+$ git remote update
+$ git merge origin/master</code>
+
+<h3>3a. Or checkout specific version/branch of the submodule</h3>
+<code>$ cd vendor/plugins/paperclip
+$ git checkout v2.1.1</code>
+
+<h3>3.1. And commit this update/version into your repository.</h3>
+<code>$ cd ../../..
+$ git status
+<span style="color: #999999;">...
+#   modified:   vendor/plugins/paperclip
+...</span>
+$ git add .
+$ git commit -m "updated paperclip plugin"</code>
+
+<h2>4. Set up your submodule to edit it locally and push it upstream.</h2>
+<code>$ cd vendor/plugins/paperclip
+$ git remote add upstream git@github.com:morhekil/paperclip.git
+<span style="color: #999999;"><em> ... do some changes in the plugin here and commit them ...</em></span>
+$ git push upstream master
+</code>
+
+and that's pretty much all the stuff you'll need in your daily work, folks. Now, if you're still wondering "why should I bother", I'll briefly explain what makes git submodules so great.
+<h1>Why should you give a damn about submodules?</h1>
+So I hear you saying "but we have scripts/plugin, we have piston, we have this, we have that..." Yes, we do. But - why bother with some third-party monkey-patching style tools those try to simulate the job of your VCS when you can have your VCS actually do it's job? Every layer one stacks up is another potential point of failure, so I prefer to squeeze all the juice from every tool I use before patching it's deficiencies with third party's products.
+
+Of course, that's not enough for normal people. In our mash-ups-hungry age it seems just natural to stock things in pile to get what you need. But - with submodules you can do a lot of other nice things, too.
+
+You can easily <strong>mix and test specific versions</strong> of your plugins, AND even play with it <strong>in the branches of your main repository</strong>, publishing them and sharing the results.
+
+You can <strong>fork any of your submodules,</strong> <strong>merge it</strong> with someone else's fork (or even two) and <strong>stick it back into your app</strong>. And do it with <strong>cherry-picking the changes</strong> (see that <em>git merge</em> command in part 3 of the action guide up there?), and keeping the ability to <strong>track and pull changes</strong> of all your origins and other forks one month later. You fork got merged into mainline next week? No problem, just revert back to mainline's branch with a couple of commands.
+
+You can <strong>work on your plugin independently</strong> from your main application, being able to <strong>commit into plugin's very own repository and push it upstream</strong> - and at the same time your have your plugin right inside your application where you can run all your integration tests on the whole tree. And for other who clone your application it's all seamless - they just clone it as usual, init &amp; update the submodules - and they're ready to roll.
+
+Still not convinced? Well, just try it. When you start writing your new app - just find all your plugins on GitHub and use submodules instead of your dull old script/plugin. Even if you use some plugins those officialy live in Subversion repos - give it a try and try to search them on GitHub. As it seems, almost every repository worth something for a Rails developer is being synced by someone at GitHub.
+
+Still got problems/questions? Ask them. I'm sure the answers are already on the way.
