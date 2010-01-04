@@ -2,12 +2,16 @@
 <html>
   <head>
     <title>{{ page.title }}</title>
-    <link href="/pygments.css" rel="stylesheet" type="text/css" />
+    <link href="/styles/reset.css" rel="stylesheet" type="text/css" />
+    <link href="/styles/pygments.css" rel="stylesheet" type="text/css" />
+    <link href="/styles/content.css" rel="stylesheet" type="text/css" />
   </head>
 
   <body>
     <h1>{{ page.title }}</h1>
 
-    {{ content }}
+    <div id="wrapper">
+        {{ content }}
+    </div>
   </body>
 </html>

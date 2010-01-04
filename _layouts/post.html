@@ -2,15 +2,29 @@
 <html>
   <head>
     <title>{{ page.title }}</title>
-    <link href="/pygments.css" rel="stylesheet" type="text/css" />
+    <link href="/styles/reset.css" rel="stylesheet" type="text/css" />
+    <link href="/styles/pygments.css" rel="stylesheet" type="text/css" />
+    <link href="/styles/content.css" rel="stylesheet" type="text/css" />
   </head>
 
   <body>
-    <a href="/">&lt;&lt;&lt; back to the main page</a>
+      
+    <div id="wrapper">
+        <a href="/">&lt;&lt;&lt; back to the main page</a>
     
-    <h1>{{ page.title }}</h1>
+        <div class="post">
+            <div class="post-header">
+                <h2>{{ page.title }}</h2>
+                <p class="meta">
+                  <abbr class="published" title="{{ page.date }}">{{ page.date | date_to_long_string }}</abbr>
+                </p>
+            </div>
 
-    {{ content }}
+            <div class="post-content">
+                {{ content }}
+            </div>
+        </div>
+    </div>
     
     <div id="disqus_thread"></div><script type="text/javascript" src="http://disqus.com/forums/speakmyname/embed.js"></script><noscript><a href="http://disqus.com/forums/speakmyname/?url=ref">View the discussion thread.</a></noscript><a href="http://disqus.com" class="dsq-brlink">blog comments powered by <span class="logo-disqus">Disqus</span></a>
     
