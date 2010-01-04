@@ -33,6 +33,7 @@ As you can see, it's a simple example - we're running two effects and then remov
 So let's get to binding. In prototype binding methods allow you to define the meaning of <i>this</i> keyword, and also to set the arguments the function will be called with. And it's the latter we're interested in right now.
 
 Let's first rewrite our cleanup code as a function taking the single argument to define it's target:
+
 {% highlight javascript %}
 var cleanup_func = function(target) { target.setStyle({ backgroundColor: null, backgroundImage: null }) };
 {% endhighlight %}
