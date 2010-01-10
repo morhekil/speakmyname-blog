@@ -28,7 +28,7 @@ I'll skip some boring details of setting up the basic Rails application, adding 
 
 And we're ready for the real deal now. Do you still remember what we're going to do here? We want to allow our users to edit their comments for 10 minutes only after the posting. So what's in play here? Author (or his id), comment as an object and comment's creation time as the most important thing. And where do we have all these things together? Well, in the comment itself, of course. So it looks logical to delegate ownership verification to the comment object, and by passing current user to the comment let the comment run it's checks and tell us whether it allows this user to do anything with the comment or not.
 
-Sounds good enough to start with, so first of all - let's spec what we want to achieve. We'll call object's method to check for specific role "is_#{role_name}?", so our specs should like the following:
+Sounds good enough to start with, so first of all - let's spec what we want to achieve. We'll call object's method to check for specific role "is_#{role_name}?", so our specs should look like the following:
 
 {% highlight ruby %}
 require File.expand_path(File.dirname(__FILE__) + '/../spec_helper')
