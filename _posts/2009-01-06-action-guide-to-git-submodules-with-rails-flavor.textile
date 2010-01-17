@@ -17,46 +17,65 @@ I'll try to collect in this post current best practices of a submodules workflow
 <h1>Git submodules action guide</h1>
 
 <h2>1. Add new plugin to your app as a submodule</h2>
-<code>$ git submodule add git://github.com/thoughtbot/paperclip.git vendor/plugins/paperclip
+
+{% highlight text %}
+$ git submodule add git://github.com/thoughtbot/paperclip.git vendor/plugins/paperclip
 $ git status
-<span style="color: #999999;">...
-#	new file: .gitmodules
-#	new file: vendor/plugins/paperclip
-...</span>
+...
+# new file: .gitmodules
+# new file: vendor/plugins/paperclip
+...
 $ git add .
-$ git commit -m "adding paperclip plugin as a submodule"</code>
+$ git commit -m "adding paperclip plugin as a submodule"
+{% endhighlight %}
 
 <h2>2. Initialize and checkout repository's submodules</h2>
-<code>$ git submodule init
-$ git submodule update</code>
+
+{% highlight text %}
+$ git submodule init
+$ git submodule update
+{% endhighlight %}
 
 <h2>3. Update submodule and merge in it's latest remote changes</h2>
-<code>$ cd vendor/plugins/paperclip
+
+{% highlight text %}
+$ cd vendor/plugins/paperclip
 $ git remote update
-$ git merge origin/master</code>
+$ git merge origin/master
+{% endhighlight %}
 
 <h3>3a. Or checkout specific version/branch of the submodule</h3>
-<code>$ cd vendor/plugins/paperclip
-$ git checkout v2.1.1</code>
+
+{% highlight text %}
+$ cd vendor/plugins/paperclip
+$ git checkout v2.1.1
+{% endhighlight %}
 
 <h3>3.1. And commit this update/version into your repository.</h3>
-<code>$ cd ../../..
+
+{% highlight text %}
+$ cd ../../..
 $ git status
-<span style="color: #999999;">...
+...
 #   modified:   vendor/plugins/paperclip
-...</span>
+...
 $ git add .
-$ git commit -m "updated paperclip plugin"</code>
+$ git commit -m "updated paperclip plugin"
+{% endhighlight %}
 
 <h2>4. Set up your submodule to edit it locally and push it upstream.</h2>
-<code>$ cd vendor/plugins/paperclip
+
+{% highlight text %}
+$ cd vendor/plugins/paperclip
 $ git remote add upstream git@github.com:morhekil/paperclip.git
-<span style="color: #999999;"><em> ... do some changes in the plugin here and commit them ...</em></span>
+... do some changes in the plugin here and commit them ...
 $ git push upstream master
-</code>
+{% endhighlight %}
 
 and that's pretty much all the stuff you'll need in your daily work, folks. Now, if you're still wondering "why should I bother", I'll briefly explain what makes git submodules so great.
+
 <h1>Why should you give a damn about submodules?</h1>
+
 So I hear you saying "but we have scripts/plugin, we have piston, we have this, we have that..." Yes, we do. But - why bother with some third-party monkey-patching style tools those try to simulate the job of your VCS when you can have your VCS actually do it's job? Every layer one stacks up is another potential point of failure, so I prefer to squeeze all the juice from every tool I use before patching it's deficiencies with third party's products.
 
 Of course, that's not enough for normal people. In our mash-ups-hungry age it seems just natural to stock things in pile to get what you need. But - with submodules you can do a lot of other nice things, too.
