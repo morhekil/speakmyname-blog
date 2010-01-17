@@ -3,4 +3,4 @@ title: The Rebirth
 layout: post
 ---
 
-So I've decided to scrap the old WordPress installation and moved everything to "Jekyll":http://wiki.github.com/mojombo/jekyll, using "Disqus":http://disqus.com to power the comments. Let's see how it goes this way. Some old and not-so-relevant posts were killed on the way as I dislike them now.
+So I've decided to scrap the old WordPress installation and moved everything to "Jekyll":http://wiki.github.com/mojombo/jekyll, using "Disqus":http://disqus.com to power the comments. Design is based on "Simplr theme from plaintxt.org":http://www.plaintxt.org/themes/simplr/. Let's see how it goes this way. Some old and not-so-relevant posts were killed on the way as I dislike them now.
