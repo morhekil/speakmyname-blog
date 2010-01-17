@@ -16,10 +16,14 @@ And everything is good and you feel good and you're sure that you're just damn g
 
 So here you go - grab that <a href="http://github.com/morhekil/factory_haml_rspec_scaffold/">Factory Haml RSpec Scaffold from GitHub</a> and put it as a plugin under your vendor/plugins directory. <a href="http://speakmy.name/2009/01/action-guide-to-git-submodules-with-rails-flavor/">Remember how to do it right? Of course - as a submodule!</a> 
 
-<code>$ git submodule add git://github.com/morhekil/factory_haml_rspec_scaffold.git vendor/plugins/factory_haml_rspec_scaffold</code>
+{% highlight console %}
+$ git submodule add git://github.com/morhekil/factory_haml_rspec_scaffold.git vendor/plugins/factory_haml_rspec_scaffold
+{% endhighlight %}
 
 And just use it instead of those dull old Rails scaffolds:
 
-<code>$ ./script/generate factory_haml_rspec_scaffold Invoice amount:float info:string</code>
+{% highlight console %}
+$ ./script/generate factory_haml_rspec_scaffold Invoice amount:float info:string
+{% endhighlight %}
 
 Want to take a look at the results first? No problem - <a href="http://gist.github.com/61499">here's a gist</a> with controller's spec and index HAML template.
