@@ -1,27 +1,29 @@
 body {
   background: #fff;
   color: #111;
-  line-height: 133%;
+  line-height: 1.5em;
   margin: 0 0 3em;
   padding: 0;
   text-align:center;
   font-family: verdana,geneva,sans-serif;
-  font-size:75%;
+  font-size: 9.5pt;
 }
 
-pre, code { font-size: 120%; width: 100%; white-space: pre; overflow: auto;
+pre, code { font-size: 110%; width: 100%; white-space: pre; overflow: auto;
   padding: 0.5em;
   background-color: #f2f5f7; border-left: 3px solid #C8CACD;
 }
 .highlight { position: relative; }
 .highlight .lineno { color: #999999; }
 
+.post p { text-align: justify; }
+
 #header { margin-top: 2em; text-align: center; font-family: arial, helvetica, sans-serif;}
 #header h1 { font-size: 2.7em; line-height: 133%; font-weight: 700; }
 #header h1 a { text-decoration: none; }
 #header #subtitle { margin-left: 8em; font-style: italic; font-size: 1.2em; color: #888; }
 
-#wrapper { max-width: 65em; margin: 2em auto; text-align: left; }
+#wrapper { max-width: 60em; margin: 2em auto; text-align: left; }
 
 a, a:link {color: #28425e; outline: none;}
 a:hover { color: #e15119; }
@@ -46,9 +48,10 @@ h3 { font-size: 1.1em; font-family: arial, helvetica, sans-serif; font-weight: 6
     line-height: 133%; margin-top: 1em; margin-bottom: 0.5em; }
 
 /* Disqus comments styling */
-#comments-wrapper { max-width: 65em; margin: 5em auto 0em auto; text-align: left; }
+#comments-wrapper { max-width: 60em; margin: 5em auto 0em auto; text-align: left; }
 #comments-wrapper #comments-title { font-size: 1.2em; margin: 1em 0 0; line-height: 133%; }
 #disqus_thread { border-top: 2px solid #637B93; }
+#disqus_thread h3 { margin-top: 0; }
 #disqus_thread #dsq-new-post { background-color: #EBEEF1; padding: 0.5em; margin-bottom: 1em; }
 #disqus_thread #dsq-content .dsq-subscribe-menu { background-image: none; }
 #disqus_thread #dsq-comments-title { float: left; width: 20em; }
