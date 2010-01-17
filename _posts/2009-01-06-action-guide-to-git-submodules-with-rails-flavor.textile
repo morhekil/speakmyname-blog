@@ -18,7 +18,7 @@ I'll try to collect in this post current best practices of a submodules workflow
 
 <h2>1. Add new plugin to your app as a submodule</h2>
 
-{% highlight text %}
+{% highlight console %}
 $ git submodule add git://github.com/thoughtbot/paperclip.git vendor/plugins/paperclip
 $ git status
 ...
@@ -31,14 +31,14 @@ $ git commit -m "adding paperclip plugin as a submodule"
 
 <h2>2. Initialize and checkout repository's submodules</h2>
 
-{% highlight text %}
+{% highlight console %}
 $ git submodule init
 $ git submodule update
 {% endhighlight %}
 
 <h2>3. Update submodule and merge in it's latest remote changes</h2>
 
-{% highlight text %}
+{% highlight console %}
 $ cd vendor/plugins/paperclip
 $ git remote update
 $ git merge origin/master
@@ -46,14 +46,14 @@ $ git merge origin/master
 
 <h3>3a. Or checkout specific version/branch of the submodule</h3>
 
-{% highlight text %}
+{% highlight console %}
 $ cd vendor/plugins/paperclip
 $ git checkout v2.1.1
 {% endhighlight %}
 
 <h3>3.1. And commit this update/version into your repository.</h3>
 
-{% highlight text %}
+{% highlight console %}
 $ cd ../../..
 $ git status
 ...
@@ -65,7 +65,7 @@ $ git commit -m "updated paperclip plugin"
 
 <h2>4. Set up your submodule to edit it locally and push it upstream.</h2>
 
-{% highlight text %}
+{% highlight console %}
 $ cd vendor/plugins/paperclip
 $ git remote add upstream git@github.com:morhekil/paperclip.git
 ... do some changes in the plugin here and commit them ...
