@@ -3,3 +3,5 @@ pygments: true
 lsi: true
 paginate: 10
 permalink: pretty
+exclude: --
+  - tasks
