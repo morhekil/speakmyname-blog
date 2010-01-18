@@ -56,7 +56,8 @@ h3 { font-size: 1.1em; font-family: arial, helvetica, sans-serif; font-weight: 6
 #disqus_thread h3 { margin-top: 0; }
 #disqus_thread #dsq-new-post { background-color: #EBEEF1; padding: 0.5em; margin-bottom: 1em; }
 #disqus_thread #dsq-content .dsq-subscribe-menu { background-image: none; }
-#disqus_thread #dsq-content .dsq-login-buttons { background-image: none; margin-bottom: 0; }
+#disqus_thread #dsq-content .dsq-login-buttons { background-image: none; margin-bottom: 0; padding-bottom: 0.5em; }
+#disqus_thread #dsq-content .dsq-request-user-info { background-image: none; margin-bottom: 0; padding-bottom: 0.5em; }
 #disqus_thread #dsq-comments-title { float: left; width: 20em; }
 #disqus_thread #dsq-content .dsq-options { clear: none; font-size: 0.9em; float: right;
   background-image: none; }
