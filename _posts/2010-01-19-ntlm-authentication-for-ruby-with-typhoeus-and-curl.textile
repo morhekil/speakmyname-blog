@@ -68,4 +68,6 @@ I've forked the typhoeus project until the changes may become available upstream
 
 You can also check the README file on github - it contains full info about the changes added in the fork, there's more then described in this post. Verbose debug output is a useful addition, for example.
 
-If you miss other features available in libcurl and you'd like to get an easy way to access them - drop me a note, it's likely that they're easy to add.
+*NB: the changes have been merged upstream.* Typhoeus 0.1.15 includes this additional authentication code and verbose output option, so you may just grab the main gem. Thanks to Paul Dix for pulling it in. Github repo will stay as my playground for a while, but I strongly advise you to stick with the main project instead of the curly one.
+
+If you miss other features available in libcurl and you'd like to get an easy way to access them - drop me a note, it's quite likely that they're easy to add.
