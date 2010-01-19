@@ -1,0 +1,71 @@
+--- 
+title: NTLM authentication for Ruby with Typhoeus and libcurl
+layout: post
+excerpt: |-
+  A couple of time I've faced a problem of performing NTLM authentication from Ruby code. The issue here is that it's a proprietary Microsoft's authentication scheme, so it is a certain challenge for the developers to implement. After using different workarounds and proxies, I've moved on and implemented a proper solution that extends Typhoeus - networking library build upon libcurl.
+---
+
+A couple of time I've faced a problem of performing NTLM authentication from Ruby code. The issue here is that it's a proprietary Microsoft's authentication scheme, so it is a certain challenge for the developers to implement. Another side of the problem is that while there's a patch for Ruby's Net::HTTP that allows it to perform NTLM auth, the patch is outdated and doesn't work with recent versions of IIS. And usually such IIS installation do not allow any other auth scheme except NTLM, so the only way to not use is to talk to server's admins and try to persuade them to enable other authentication methods - the way that is more likely to fail then to succeed.
+
+h2. NTLM auth with ntlmaps proxy
+
+I've been using a number of workarounds to solve the problem before, with "ntlmaps project":http://ntlmaps.sourceforge.net being the most usable one. It stands for "NTLM Authorization Proxy Server" and it's perfect if you can proxy your requests through it and if you're fine with using the same Windows domain for all requests. You set it up on your own server, and then just specify it in your code as the proxy server. Here is the example of WWW::Mechanize talking to NTLM server:
+
+{% highlight ruby %}
+# Create the Mechanize instance
+agent = WWW::Mechanize.new
+# Specify host and port of our NTLMAPS installation
+agent.set_proxy(ntlmaps_host, ntlmaps_port)
+# And specify username and password to authenticate on remote NTLM server with
+agent.auth(name, pass)
+{% endhighlight %}
+
+As you can see, we can even authenticate on the remote NTLM server with different usernames and passwords if we need to. To enable this feature you have to set NTLM_TO_BASIC options in ntlmaps config file and leave USER and PASSWORD empty, like this:
+
+{% highlight text %}
+USER:
+PASSWORD:
+NTLM_TO_BASIC:1
+{% endhighlight %}
+
+Of course, you'll also need to specify port to listen, etc, but the config file is very well documented, so you shouldn't have any problems getting it to work.
+
+h2. NTLM auth in plain Ruby with Typhoeus/libcurl
+
+But while it's a good setup to get everything up and running quickly, but still ntlmaps proxy adds another piece into the infrastructure that needs to be monitored and taken care of, so I'd rather have a plain Ruby solution to let my code talk directly to the remote servers without something in the middle. After some digging and experimenting, I've discovered that curl (and libcurl as it's basis) works very well with NTLM servers - at least it's been able to successfully authenticate and all servers I'm interested in right now.
+
+There's a number of different Ruby wrapper for libcurl, so if you're using one right now - it's probable that you're already able to do all NTLM stuff. I've been already using  "Typhoeus library":http://github.com/pauldix/typhoeus, so that's what I've went with. After looking into it's code I've found that it exposes only a limited set of libcurl's features, so to get access to the different authentication methods I've had to hack it a bit and teach it a bit more of libcurl. It was not that hard, so after a little while I've been able to use Typhoeus::Easy to directly work with NTLM servers using the following code:
+
+{% highlight ruby %}
+e = Typhoeus::Easy.new
+e.auth = {
+  :username => 'username',
+  :password => 'password',
+  :method => Typhoeus::Easy::AUTH_TYPES[:CURLAUTH_NTLM]
+}
+e.url = "http://example.com/auth_ntlm"
+e.method = :get
+e.perform
+{% endhighlight %}
+
+As you can see, here I fix authentication method to be _:CURLAUTH_NTLM_ as I already know what I need. If you're working with unknown server, you may also now query it's supported authentication methods using _Typhoues::Easy#auth_methods_. This method will return you a number that you must decode yourself, these are the values of different authentication methods:
+
+{% highlight ruby %}
+AUTH_TYPES = {
+  :CURLAUTH_BASIC         => 1,
+  :CURLAUTH_DIGEST        => 2,
+  :CURLAUTH_GSSNEGOTIATE  => 4,
+  :CURLAUTH_NTLM          => 8,
+  :CURLAUTH_DIGEST_IE     => 16
+}
+{% endhighlight %}
+
+The same names can be used to specify auth methods as per example above.
+
+h2. Curly (forked) Typhoeus
+
+I've forked the typhoeus project until the changes may become available upstream, so if you're interested in trying it out - you may get the source at my "typhoeus_curly github repo":http://github.com/morhekil/typhoeus_curly, or grab "typhoeus_curly gem":http://gemcutter.org/gems/typhoeus_curly from gemcutter (_gem install typhoeus_curly_ will work as well).
+
+You can also check the README file on github - it contains full info about the changes added in the fork, there's more then described in this post. Verbose debug output is a useful addition, for example.
+
+If you miss other features available in libcurl and you'd like to get an easy way to access them - drop me a note, it's likely that they're easy to add.
