@@ -2,10 +2,10 @@
 title: NTLM authentication for Ruby with Typhoeus and libcurl
 layout: post
 excerpt: |-
-  A couple of time I've faced a problem of performing NTLM authentication from Ruby code. The issue here is that it's a proprietary Microsoft's authentication scheme, so it is a certain challenge for the developers to implement. After using different workarounds and proxies, I've moved on and implemented a proper solution that extends Typhoeus - networking library build upon libcurl.
+  A couple of times I've faced a problem of performing NTLM authentication from Ruby code. The issue here is that it's a proprietary Microsoft's authentication scheme, so it is a certain challenge for the developers to implement. After using different workarounds and proxies, I've moved on and implemented a proper solution that extends Typhoeus - networking library build upon libcurl.
 ---
 
-A couple of time I've faced a problem of performing NTLM authentication from Ruby code. The issue here is that it's a proprietary Microsoft's authentication scheme, so it is a certain challenge for the developers to implement. Another side of the problem is that while there's a patch for Ruby's Net::HTTP that allows it to perform NTLM auth, the patch is outdated and doesn't work with recent versions of IIS. And usually such IIS installation do not allow any other auth scheme except NTLM, so the only way to not use is to talk to server's admins and try to persuade them to enable other authentication methods - the way that is more likely to fail then to succeed.
+A couple of times I've faced a problem of performing NTLM authentication from Ruby code. The issue here is that it's a proprietary Microsoft's authentication scheme, so it is a certain challenge for the developers to implement. Another side of the problem is that while there's a patch for Ruby's Net::HTTP that allows it to perform NTLM auth, the patch is outdated and doesn't work with recent versions of IIS. And usually such IIS installation do not allow any other auth scheme except NTLM, so the only way to not use is to talk to server's admins and try to persuade them to enable other authentication methods - the way that is more likely to fail then to succeed.
 
 h2. NTLM auth with ntlmaps proxy
 
