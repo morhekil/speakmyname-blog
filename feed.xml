@@ -2,12 +2,13 @@
 layout: nil
 ---
 <?xml version="1.0" encoding="utf-8" ?>
-<rss version="2.0">
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
 <channel>
   <title>SpeakMy.Name blog posts</title>
   <description>recent posts on SpeakMy.Name blog</description>
   <link>{{ site.base_url }}</link>
-  <pubDate>{{ site.posts.first.date | date_to_xmlschema }}</pubDate>
+  <atom:link href="{{ site.base_url }}/feed.xml" rel="self" type="application/rss+xml" />
+  <pubDate>{{ site.posts.first.date | date: "%a, %d %b %Y 12:00:00 GMT" }}</pubDate>
   <ttl>60</ttl>
 
   {% for post in site.posts limit:10 %}
@@ -19,7 +20,7 @@ layout: nil
     {% else %}
       {{ post.content | xml_escape }}
     {% endif %}</description>
-    <pubDate>{{ post.date | date_to_xmlschema }}</pubDate>
+    <pubDate>{{ post.date | date: "%a, %d %b %Y 12:00:00 GMT" }}</pubDate>
     <guid>{{ site.base_url }}{{ post.url }}</guid>
   </item>
   {% endfor %}
