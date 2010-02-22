@@ -1,0 +1,42 @@
+--- 
+title: Running LigHTTPd 1.5 under Mac OS X
+layout: post
+excerpt: |-
+  Recently we've started playing with implementing progress-bar-style upload functionality in our of our applications. After certain consideration and discussions it's been decided that Flash-based uploads are so last century and tried a simple proof-of-concept of flashless uploader widget on one of our servers running LigHTTPd 1.5, and that turned out to be a huge success. So the next logical step was to upgrade LigHTTPd on my own machine to be able to play with it first-hand.
+  
+  And that gave me a problem - Mac OS X 10.5.7 is my work horse, and apparently 1.5 branch has a whole bunch of issues on OS X. To save you some time and frustration (and probably me, if I'll ever need to repeat it in the future) here is the full package of things you'll need to run 1.5 under OS X.
+---
+
+Recently we've started playing with implementing progress-bar-style upload functionality in our of our applications. We're running LigHTTPd web server as a front-end on all our production servers, and I know that it's 1.4 version has certain problems with indicated uploads - like "a bug with Expect header":http://redmine.lighttpd.net/issues/1017 fixed only in 1.4.21 that caused us problems some time ago with "swf_upload":http://swfupload.org widget, and general availability of "mod_uploadprogress":http://redmine.lighttpd.net/projects/lighttpd/wiki/Docs:ModUploadProgress only for 1.5 branch (though there's a patch backporting it to 1.4).
+
+After certain consideration and discussions it's been decided that Flash-based uploads are so last century (and Jobs will certainly agree with us on that), so together with Nikolay from "RightJS":http://rightjs.org/ we've ran a simple proof-of-concept of flashless uploader widget on one of our servers running LigHTTPd 1.5, and that turned out to be a huge success. So the next logical step was to upgrade LigHTTPd on my own machine to be able to play with it first-hand.
+
+And that gave me a problem - Mac OS X 10.5.7 is my work horse, and apparently 1.5 branch has a whole bunch of issues on OS X. It's older builds (like 1691) have "problems with backends implementation under OS X":http://redmine.lighttpd.net/issues/show/1065, rendering them completely unusable, and the "latest snapshot 2533":http://blog.lighttpd.net/articles/2009/06/11/pre-release-lighttpd-1-4-23rc2-r2534-new-1-5-snapshot was a bitch to compile. It complained about missing glib2's symbols (though being able to happily find glib during the configure phase), and even about it's own symbols being missing.
+
+To save you some time and frustration (and probably me, if I'll ever need to repeat it in the future) here is the full package of things you'll need to run 1.5 under OS X. The only compromise I had to make is to remove network backends information from mod_status output - I can live with that, and I guess you can, too.
+
+So, first of all - we install LigHTTPd with MacPorts. Grab the port files "here":/files/lighttpd15-macports.tar.gz, unpack them, put them into your local ports repository and reindex it. If you don't know, how to make a local repo - check the "macports guide":lighttpd15-macports.tar.gz. Now make sure you've done everything right by running _port search lighttpd-devel_ - you should see version 2533 in the output. And install it:
+
+{% highlight bash %}
+$ sudo port install lighttpd-devel @1.5.0-r2533+ssl
+{% endhighlight %}
+
+Everything should be compiled and installed just fine for you, though it's possible that not all of the required dependencies are specified in the post - if you receive any errors about missing stuff and can't figure out what you need to install, let me know in the comments and I'll tell you.
+
+Now grab the configuration pack "here":/files/lighttpd15-osx-runtime-config.tar.gz and unpack it. Basically everything is packed into it under the real system paths, so you should be able to tell what's going where just by looking at the contents of this archive:
+* */etc/lighttpd* contains web server's config,
+* */Library/LaunchDaemons* contains startup scripts for lighty and for spawn-fcgi to launch php backends,
+* */opt/local/etc/LaunchDaemons* contains helpers for startup scripts.
+
+So put all this stuff in proper places, and before you load it up - look through /etc/lighttpd/lighttpd.conf - it's likely that you'd want to change some parameters there to match your setup, at least username/group and document root. Also you'd like to configure some virtual hosts under /etc/lighttpd/vhosts.d - I've included a sample rails application proxy template there, and any php applications require only document root to be specified.
+
+When you're done - just load the launch scripts:
+
+{% highlight bash %}
+$ sudo launchctl load -w /Library/LaunchDaemons/org.macports.lighttpd-devel.plist
+$ sudo launchctl load -w /Library/LaunchDaemons/org.macports.spawn-fcgi-php.plist
+{% endhighlight %}
+
+and you should be good to go.
+
+And with this LigHTTPd version you may kiss swf_uploader goodbye and use flashless "RightJS Uploader":http://rightjs.org/ui/uploader instead - let's nail Flash into it's coffin for good.
