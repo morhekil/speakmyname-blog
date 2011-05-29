@@ -11,9 +11,11 @@ body {
 textarea { overflow: auto; }
 
 pre, code { font-size: 110%; white-space: pre; overflow: auto;
-  padding: 0.5em; min-height: 1em;
-  background-color: #f2f5f7; border-left: 3px solid #C8CACD;
   position: relative;
+}
+pre {
+  padding: 0.5em;
+  background-color: #f2f5f7; border-left: 3px solid #C8CACD;
 }
 .highlight { position: relative; }
 .highlight .lineno { color: #999999; }
