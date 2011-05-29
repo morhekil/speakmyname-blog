@@ -1,0 +1,196 @@
+--- 
+title: Simple configuration for Ruby applications
+layout: post
+excerpt: |-
+    Sometimes we don't really need a full-blown gem with a lot of bells of whistles, when a simple hand-made class worth a dozen of lines will do the job just as well, and even better - due to the cut off of extra external dependencies. And I believe that the task of keeping a set of configuration options or settings for the application can be implemented in such "lean" class quite often. Let's see in this post how it can be done.
+---
+
+Very often in our applications we need to keep some set of data that changes not so often, but still often enough to avoid hard-coding it into the application code itself. Be it a set of URLs to pull data from, email addresses to send notifications to, or number of rows to display per page - all of that can be organized into a set of options, or settings. And it doesn't really matter if you're building the next big thing on Rails, razor sharp Sinatra API or just barebones Ruby console tool - all of these can have some pieces of data those call to separate themselves out.
+
+Of course, there're solutions like "rails-settings":http://github.com/Squeegy/rails-settings/ or "Configatron":http://github.com/markbates/configatron/, but more often then not you don't really want or need to add another table just for a dozen of parameters, or bring down the full power of a settings powerhouse for the that purpose.
+
+What can we do then to keep it simple?
+
+h2. Native Ruby-only configuration
+
+The simplest approach is to create a class that will hold our settings data and make it available for other parts of the system. We could even just put a hash into global scope, but I myself prefer to have a stricter control over the settings - for example, to make sure that the names stay consistent across the system. Also putting some flesh onto the bones of this class will allow us to easily provide per-environment settings in Rails, with default values available in environments those need them.
+
+{% highlight ruby %}
+module Appdata
+  # we don't want to instantiate this class - it's a singleton,
+  # so just keep it as a self-extended module
+  extend self
+
+  # Appdata provides a basic single-method DSL with .parameter method
+  # being used to define a set of available settings.
+  # This method takes one or more symbols, with each one being
+  # a name of the configuration option.
+  def parameter(*names)
+    names.each do |name|
+      attr_accessor name
+
+      # For each given symbol we generate accessor method that sets option's
+      # value being called with an argument, or returns option's current value
+      # when called without arguments
+      define_method name do |*values|
+        value = values.first
+        value ? self.send("#{name}=", value) : instance_variable_get("@#{name}")
+      end
+    end
+  end
+  
+  # And we define a wrapper for the configuration block, that we'll use to set up
+  # our set of options
+  def config(&block)
+    instance_eval &block
+  end
+  
+end
+{% endhighlight %}
+
+And that's it - basically just a single method, that builds all necessary options in runtime and provides accessor methods for all of them. The usage is simple - first of all, we define a set of configuration options we'd like to have available - this code must always be executed during the application setup, so if we're building Rails app - we can put it into config/initializers/appdata.rb
+
+{% highlight ruby %}
+Appdata.config do
+  parameter :search_url
+  parameter :email_admin, :email_support
+end
+{% endhighlight %}
+
+And then we set specific values for our options like this:
+
+{% highlight ruby %}
+Appdata.config do
+  search_url    'http://google.com'
+  email_admin   'someadmin@somewhere.net'
+end
+{% endhighlight %}
+
+and this block can go into any environment-specific file - for example, if we're working with Rails 3, we can put a set of default option values into config.after_initialize
+block of config/application.rb file, and override it per-environment with the same block in config/environments/production.rb, etc.
+
+h2. YAML-based configuration
+
+Of course, sometimes that simplistic approach is not quite enough, and we need to move our configuration into a separate file - for example, to replace it on deploy on different servers, or maybe to allow another member of the team to modify it without digging through the code. In this case we can use a basic YAML file, and read our setup from it. And what's more - when using YAML configs, I often find myself wanting to split config data into a number of smaller targeted files, instead of dumping it all into a single huge config. And that's also a simple thing to do with this approach.
+
+Here's a solution that is a bit Rails-tailored.
+
+{% highlight ruby %}
+module Settings
+  # again - it's a singleton, thus implemented as a self-extended module
+  extend self
+  
+  @_settings = {}
+  attr_reader :_settings
+  
+  # This is the main point of entry - we call Settings.load! and provide
+  # a name of the file to read as it's argument. We can also pass in some
+  # options, but at the moment it's being used to allow per-environment
+  # overrides in Rails
+  def load!(filename, options = {})
+    newsets = YAML::load_file(filename).deep_symbolize
+    newsets = newsets[options[:env].to_sym] if \
+                                               options[:env] && \
+                                               newsets[options[:env].to_sym]
+    deep_merge!(@_settings, newsets)                                                                                                                                                                           
+  end
+  
+  # Deep merging of hashes
+  # deep_merge by Stefan Rusterholz, see http://www.ruby-forum.com/topic/142809
+  def deep_merge!(target, data)
+    merger = proc{|key, v1, v2| Hash === v1 && Hash === v2 ? v1.merge(v2, &merger) : v2 }
+    target.merge! data, &merger
+  end
+
+  def method_missing(name, *args, &block)
+    if @_settings[name.to_sym]
+      @_settings[name.to_sym]
+    else
+      raise NoMethodError, "unknown configuration root #{name}"
+    end
+  end
+
+end
+{% endhighlight %}
+
+Instead of building a set of fixed methods to query the values, as we did in the previous example, here we use method_missing instead of hook into Ruby's way of methods lookup, and use the root keys of our configuration files as method names to call on the final class. So if we take this yml file as an example:
+
+{% highlight yaml %}
+emails:
+  admin:    someadmin@somewhere.net
+  support:  support@somewhere.net
+
+urls:
+  search:   http://google.com
+  blog:     http://speakmy.name
+{% endhighlight %}
+
+and we load it like this:
+
+{% highlight ruby %}
+Settings.load!("config/appdata/example.yml")
+{% endhighlight %}
+
+then we can query config values in our code this way:
+
+{% highlight ruby %}
+Settings.emails[:admin]       # -> someadmin@somewhere.net
+Settings.emails[:support]     # -> support@somewhere.net
+Settings.urls[:search]        # -> http://google.com
+Settings.urls[:blog]          # -> http://speakmy.name
+{% endhighlight %}
+
+But as I've mentioned in the comments, this snippet also gives us an option to set the settings per-environment. Here's an example of the yml file:
+
+{% highlight yaml %}
+production:
+  emails:
+    admin:    someadmin@somewhere.net
+    support:  support@somewhere.net
+
+development: &development
+  emails:
+    admin:    admin@test.local
+    support:  support@test.local
+
+test:
+  <<: *development
+{% endhighlight %}
+
+If you wonder about those &development and *development things - that's actually how you do "symlinks" in YAML. These notation marks all items under 'development' key with 'development' mark, and that allows us to insert them later in the file anywhere we want to avoid repeating the same configuration values for similar environments.
+
+So, let's say we work on Rails app - then we can just pass Rails.env as :env key in our options, when loading the yml file:
+
+{% highlight ruby %}
+Settings.load!(
+  "#{Rails.root}/config/appdata/env-example.yml",
+  :env => Rails.env)
+{% endhighlight %}
+
+The loader will select block of value relevant to the given environment, and add them to the settings class:
+
+{% highlight ruby %}
+# If we're in production environment
+Settings.email[:admin]    # -> someadmin@somewhere.net
+Settings.email[:support]  # -> support@somewhere.net
+{% endhighlight %}
+
+{% highlight ruby %}
+# If we're in test environment
+Settings.email[:admin]    # -> admin@test.local
+Settings.email[:support]  # -> support@test.local
+{% endhighlight %}
+
+Of course, you can mix and match yml files with per-environment, and global settings, by just loading them separately and providing/omitting :env option:
+
+{% highlight ruby %}
+Settings.load!(
+  "#{Rails.root}/config/appdata/data-in-environment.yml",
+  :env => Rails.env)
+Settings.load!("#{Rails.root}/config/appdata/data-without-environment.yml")
+{% endhighlight %}
+
+h2. Conclusion
+
+I've shown here two basic ways of loading configuration or settings data in your application. As you can see, both of them are just a couple of lines of codes in length, and provide the way for you to separate the data away from your code - that is big plus in many cases. Next time you put a URL or email string right into your code - ask yourself whether it's going to be changed often enough to separate it from the code, and if it is - do it. It's simple, and your final code will be cleaner and more stable.
+
