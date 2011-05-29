@@ -12,7 +12,9 @@ excerpt: |-
     The problem here is that Capistrano by default (by that I mean when you have :git_enable_submodules settings in your config file) only issues "git submodule init &amp;&amp; git submodule update" at the root of your checked out repository, so if you application depends on any submodules down the tree to be initialized, too - well, "Screeewed!" (C) GoW2
 ---
 
-*UPDATE:* it seems that it's been covered in the recent versions of git, by passing _--recursive_ parameter to *git submodule update* command. This parameter is also supported by the recent versions of Capistrano, so this gem is not really necessary anymore. Still, it should continue to work if you're forced to use the older versions of your tools.
+*UPDATE:* it seems like that issue has been covered in the recent versions of git, by passing _--recursive_ parameter to *git submodule update* command. This parameter is also supported by the recent versions of Capistrano, so this gem is not really necessary anymore. Still, this gem should continue to work if you're forced to use the older versions of your tools.
+
+<hr />
 
 So let's say you have some big codebase in *Git repository*. Or maybe not even that big, but with a complex dependency added in as a "submodule":http://book.git-scm.com/5_submodules.html. And this submodule is complex enough that it makes sence for it to reference other project and *include them as submodules*, too. Sounds too complex? Well, maybe it is, but there're certain situations when this workflow is plausible, especially if your upstream uses *Subversion instead of Git*. "Symfony":http://www.symfony-project.com comes to mind as an example - huge framework with a number of dependencies (look at version 1.2) that uses svn for development.
 
