@@ -1,4 +1,4 @@
---- 
+---
 title: Simple configuration for Ruby applications
 layout: post
 excerpt: |-
@@ -38,13 +38,13 @@ module Appdata
       end
     end
   end
-  
+
   # And we define a wrapper for the configuration block, that we'll use to set up
   # our set of options
   def config(&block)
     instance_eval &block
   end
-  
+
 end
 {% endhighlight %}
 
@@ -79,10 +79,10 @@ Here's a solution that is a bit Rails-tailored.
 module Settings
   # again - it's a singleton, thus implemented as a self-extended module
   extend self
-  
+
   @_settings = {}
   attr_reader :_settings
-  
+
   # This is the main point of entry - we call Settings.load! and provide
   # a name of the file to read as it's argument. We can also pass in some
   # options, but at the moment it's being used to allow per-environment
@@ -92,13 +92,14 @@ module Settings
     newsets = newsets[options[:env].to_sym] if \
                                                options[:env] && \
                                                newsets[options[:env].to_sym]
-    deep_merge!(@_settings, newsets)                                                                                                                                                                           
+    deep_merge!(@_settings, newsets)
   end
-  
+
   # Deep merging of hashes
   # deep_merge by Stefan Rusterholz, see http://www.ruby-forum.com/topic/142809
   def deep_merge!(target, data)
-    merger = proc{|key, v1, v2| Hash === v1 && Hash === v2 ? v1.merge(v2, &merger) : v2 }
+    merger = proc{|key, v1, v2|
+      Hash === v1 && Hash === v2 ? v1.merge(v2, &merger) : v2 }
     target.merge! data, &merger
   end
 
