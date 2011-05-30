@@ -103,11 +103,8 @@ module Settings
   end
 
   def method_missing(name, *args, &block)
-    if @_settings[name.to_sym]
-      @_settings[name.to_sym]
-    else
-      raise NoMethodError, "unknown configuration root #{name}"
-    end
+    @_settings[name.to_sym] ||
+    fail(NoMethodError, "unknown configuration root #{name}", caller)
   end
 
 end
