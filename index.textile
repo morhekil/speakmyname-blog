@@ -4,7 +4,7 @@ title: SpeakMy.Name
 ---
 
 <div id="posts-list">
-  
+
   {% for post in site.posts limit:10 %}
     <div class="post">
       <div class="post-header">

@@ -1,8 +1,16 @@
 ---
-title: Concurrent Programming and Threads in Ruby - reading list
+title: Concurrent Programming and Threads in Ruby - a reading list
 layout: post
 excerpt: |-
-    Sometimes we don't really need a full-blown gem with a lot of bells of whistles, when a simple hand-made class worth a dozen of lines will do the job just as well, and even better - due to the cut off of extra external dependencies. And I believe that the task of keeping a set of configuration options or settings for the application can be implemented in such "lean" class quite often. Let's see in this post how it can be done.
+  Many rubyists consider threads in Ruby as somewhat of an arcane knowledge,
+  though in reality they're a very well researched and understood concept. Of
+  course, writing effective multithreaded concurrent programs requires certain
+  amount of knowledge and discipline from the programmer, but there's nothing
+  that a smart one can't learn if he wants to.
+
+  To help with the task, awesome "@brainopia":http://twitter.com/brainopia compiled a list of recommended reading
+  on the topic of concurrency and threads, traslation of which into English
+  you can find in this post.
 ---
 
 Many rubyists consider threads in Ruby as somewhat of an arcane knowledge,
