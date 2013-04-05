@@ -6,3 +6,7 @@ paginate: 10
 permalink: pretty
 exclude: --
   - tasks
+  - Gemfile
+  - Gemfile.lock
+  - config.ru
+  - bin

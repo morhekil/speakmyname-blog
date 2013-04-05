@@ -1,4 +1,5 @@
 #!/bin/bash
 
 rm -rf tmp
-jekyll --no-auto && rsync -avze ssh --delete _site/ speakmy.name:/var/www/speakmy.name/html/
+# jekyll --no-auto && rsync -avze ssh --delete _site/ speakmy.name:/var/www/speakmy.name/html/
+jekyll --no-auto && jekyll-s3
