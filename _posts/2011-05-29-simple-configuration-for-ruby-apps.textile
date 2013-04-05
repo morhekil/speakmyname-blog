@@ -2,7 +2,7 @@
 title: Simple configuration for Ruby applications
 layout: post
 excerpt: |-
-    Sometimes we don't really need a full-blown gem with a lot of bells of whistles, when a simple hand-made class worth a dozen of lines will do the job just as well, and even better - due to the cut off of extra external dependencies. And I believe that the task of keeping a set of configuration options or settings for the application can be implemented in such "lean" class quite often. Let's see in this post how it can be done.
+    Sometimes we don't really need a full-blown gem with a lot of bells and whistles, when a simple hand-made class worth a dozen of lines will do the job just as well, and even better - due to the cut off of extra external dependencies. And I believe that the task of keeping a set of configuration options or settings for the application can be implemented in such "lean" class quite often. Let's see in this post how it can be done.
 ---
 
 Very often in our applications we need to keep some set of data that changes not so often, but still often enough to avoid hard-coding it into the application code itself. Be it a set of URLs to pull data from, email addresses to send notifications to, or number of rows to display per page - all of that can be organized into a set of options, or settings. And it doesn't really matter if you're building the next big thing on Rails, razor sharp Sinatra API or just barebones Ruby console tool - all of these can have some pieces of data those call to separate themselves out.
