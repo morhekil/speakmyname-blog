@@ -2,46 +2,28 @@
 title: Concurrent Programming and Threads in Ruby - a reading list
 layout: post
 excerpt: |-
-  Many rubyists consider threads in Ruby as somewhat of an arcane knowledge,
-  though in reality they're a very well researched and understood concept. Of
-  course, writing effective multithreaded concurrent programs requires certain
-  amount of knowledge and discipline from the programmer, but there's nothing
-  that a smart one can't learn if he wants to.
+  Many rubyists consider threads in Ruby as somewhat of an arcane knowledge, though in reality they're a very well researched and understood concept. Of course, writing effective multithreaded concurrent programs requires certain amount of knowledge and discipline from the programmer, but there's nothing that a smart one can't learn if he wants to.
 
-  To help with the task, awesome "@brainopia":http://twitter.com/brainopia compiled a list of recommended reading
-  on the topic of concurrency and threads, traslation of which into English
-  you can find in this post.
+  To help with the task, awesome "@brainopia":http://twitter.com/brainopia compiled a list of recommended reading on the topic of concurrency and threads, traslation of which into English you can find in this post.
 ---
 
-Many rubyists consider threads in Ruby as somewhat of an arcane knowledge,
-though in reality they're a very well researched and understood concept. Of
-course, writing effective multithreaded concurrent programs requires certain
-amount of knowledge and discipline from the programmer, but there's nothing
-that a smart one can't learn if he wants to.
+Many rubyists consider threads in Ruby as somewhat of an arcane knowledge, though in reality they're a very well researched and understood concept. Of course, writing effective multithreaded concurrent programs requires certain amount of knowledge and discipline from the programmer, but there's nothing that a smart one can't learn if he wants to.
 
-To help with the task, awesome "@brainopia":http://twitter.com/brainopia compiled a list of recommended reading
-on the topic of concurrency and threads. All kudos go to "@brainopia":http://twitter.com/brainopia, and the
-original list in Russian as available as a gist here:
+To help with the task, awesome "@brainopia":http://twitter.com/brainopia compiled a list of recommended reading on the topic of concurrency and threads. All kudos go to "@brainopia":http://twitter.com/brainopia, and the original list in Russian as available as a gist here:
 
 "https://gist.github.com/Somebody32/5232120":https://gist.github.com/Somebody32/5232120
 
-Following is the translation of that list in English, for all my
-non-Russian-speaking friends.
+Following is the translation of that list in English, for all my non-Russian-speaking friends.
 
 h2. 1. Basics
 
-First things first - the basic concepts and terminology. Don't be afraid
-of the book on an unknown OS - it describes the basics extremely well, and the
-underlying concepts are the same in every OS and every language.
+First things first - the basic concepts and terminology. Don't be afraid of the book on an unknown OS - it describes the basics extremely well, and the underlying concepts are the same in every OS and every language.
 
 "Getting Started with QNX Neutrino - Processes and Threads":http://www.qnx.com/developers/docs/6.4.1/neutrino/getting_started/s1_procs.html
 
-You should read it at least until "Starting a process" part, and if you're not
-afraid of C and want to know more about low-level workings of threads, POSIX
-system calls etc - keep reading until the end.
+You should read it at least until "Starting a process" part, and if you're not afraid of C and want to know more about low-level workings of threads, POSIX system calls etc - keep reading until the end.
 
-When you're done with this part, you should understand what is a process, thread,
-mutex, priorites, semaphores, scheduler, contex-switch, kernel states.
+When you're done with this part, you should understand what is a process, thread, mutex, priorites, semaphores, scheduler, contex-switch, kernel states.
 
 h2. 2. Ruby - Threads and Fibers
 
@@ -56,8 +38,7 @@ Basic summary of Green Threads (Ruby 1.8) and GIL (Global Interpreter Lock, Ruby
 More about GIL:
 "a.blog.about.code - The Ruby Global Interpreter Lock":http://ablogaboutcode.com/2012/02/06/the-ruby-global-interpreter-lock/
 
-With the new knowledge handy, let's look into the different implementations of
-threads in various popular (and less so) versions of Ruby:
+With the new knowledge handy, let's look into the different implementations of threads in various popular (and less so) versions of Ruby:
 "Engine Yard Developer Blog - Ruby, Concurrency and You":https://blog.engineyard.com/2011/ruby-concurrency-and-you
 
 Adding fibers and CPU/IO-bound threads into the pot:
@@ -86,13 +67,11 @@ Untangling event callbacks, and writing maintanable evented code:
 
 h2. 4. Videos
 
-And to finish it off, some great talks on the topic of synchronisation and
-concurrency:
+And to finish it off, some great talks on the topic of synchronisation and concurrency:
 "Mike Perham @ RubyConf 2011 - Scaling Ruby with Actors, or How I Learned to Stop Worrying and Love Threads":http://www.confreaks.com/videos/702-rubyconf2011-scaling-ruby-with-actors-or-how-i-learned-to-stop-worrying-and-love-threads
 "Jose Valim @ Rocky Mountain Ruby 2012":http://confreaks.com/videos/1261-rockymtnruby2012-let-s-talk-concurrency
 
-And on Celluloid (concurrent programming framework) and Sidekiq (efficient
-messaging):
+And on Celluloid (concurrent programming framework) and Sidekiq (efficient messaging):
 "Tony Arcieri @ RubyConf 2012 - The Celluloid Ecosystem":http://www.confreaks.com/videos/1302-rubyconf2012-the-celluloid-ecosystem
 "Mike Perham @ RubyConf 2012 - Asynchronous Processing for Fun and Profit":http://www.confreaks.com/videos/1290-rubyconf2012-asynchronous-processing-for-fun-and-profit
 
