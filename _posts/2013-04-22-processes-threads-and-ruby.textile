@@ -7,6 +7,8 @@ excerpt: |-
 
 Following up on my previous blog post with "a reading list on concurrent programming with Ruby":http://speakmy.name/2013/04/02/concurrent-programming-and-threads-in-ruby-reading-list/ , this is the presentation that I gave today at JN Solutions office in Sydney. I really enjoyed putting that presentation together, and I hope that you would be able to get some interesting ideas out of it, too.
 
+Keynote source file and pdf export are available "on GitHub":https://github.com/morhekil/talks-and-slides
+
 Enjoy, and feel free to share around. Got any questions/comment? Go ahead and ask me in the comments block below.
 
 <script async class="speakerdeck-embed" data-id="d7cfdaa08d63013072331231381b11e0" data-ratio="1.2994923857868" src="//speakerdeck.com/assets/embed.js"></script>
