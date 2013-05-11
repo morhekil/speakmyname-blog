@@ -1,0 +1,16 @@
+---
+title: vim - Craftsman's Precision Tool
+layout: post
+excerpt: |-
+  Slides from my lightning talk about the origins of vim editor, and explaining some basic ideas behind it.
+---
+
+If you want to learn how to use vim - this is not the presentation you want. There're hundreds of introductory talks like that online. Instead of doing yet another talk about how to start and quit vim, I decided to give some background on this awesome editor - where it came from, what are the basic ideas behind it, why vim is designed the way it is, and why it is still relevant today and standing strong amongst other "modern" editors.
+
+Keynote source file and pdf export are available "on GitHub":https://github.com/morhekil/talks-and-slides
+
+Special thanks to "@nelstrom":https://twitter.com/nelstrom for inspiration and ideas.
+
+Got questions/comments? Maybe something you want to see covered in more details about vim? Feel free to join the discussion below.
+
+<script async class="speakerdeck-embed" data-id="67addd809c210130a42562cca6dbb474" data-ratio="1.33333333333333" src="//speakerdeck.com/assets/embed.js"></script>
