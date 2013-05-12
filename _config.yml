@@ -1,5 +1,4 @@
 base_url: http://speakmy.name
-auto: true
 pygments: true
 lsi: true
 paginate: 10
