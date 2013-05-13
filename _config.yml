@@ -3,6 +3,8 @@ pygments: true
 lsi: true
 paginate: 10
 permalink: pretty
+redcloth:
+  hard_breaks: false
 exclude:
   - tasks
   - Gemfile

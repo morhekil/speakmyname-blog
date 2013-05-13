@@ -1,0 +1,174 @@
+---
+tags: devops, ruby, bash
+title: Automatic system backups with backup gem and some shell scripting - part 1, the preparation
+layout: post
+excerpt: |-
+  One of the most important things when setting up a new application server, especially for a greenfield project on untested hardware, is to make sure you have a solid backup setup to ensure the safety of your data.
+
+  Ruby makes it really easy with backup gem, and with some shell scripting we can supplement it to build a really robust and effective backup solution.
+---
+
+One of the most important things when setting up a new application server,
+especially for a greenfield project on untested hardware, is to make sure you
+have a solid backup configured to ensure the safety of your data.
+
+Ruby is rarely (well, at the very least not often enough) being mentioned
+without its "on Rails" part, but Ruby makes most backup tasks really easy with
+"backup gem":https://github.com/meskyanichi/backup , and with some shell
+scripting we can supplement it and build a really robust and effective backup
+solution.
+
+To make this tutorial easier to follow, I'm going to split it into three relatively
+independent parts:
+
+# Preparing your backup storage (this post).
+# Using backup gem to create backups of the database and smaller directories _(coming soon)_
+# Using rsync to generate incremental backups of huge directories _(coming soon)_
+
+This is going to be a Linux-specific tutorial, as I do believe that you should
+be deploying your code on Linux servers. While it might work on OS X as well
+(YMMV, though), it definitely isn't applicable to Windows systems.
+
+But first of all, let's start from the very beginning - the backup storage itself.
+
+You definitely don't want your backups to be stored on the same filesystem as
+the original data itself (think what would happen in case of a filesystem corruption),
+and while storing it on a separate hard drive on the same system is a better idea -
+even better one would be to move backups on a completely separate machine,
+preferably - half way across the world, just to be safe. And what's the best
+way to access remote servers? SSH, of course, and that leads us to the first
+step.
+
+h2. 1.1. Making access to remote backup easy
+
+We can always use sftp et al to upload the data, of course, but there is an
+easier option - mount the remote filesystem locally using
+"sshfs":http://fuse.sourceforge.net/sshfs.html . You should be able to easily
+install it on your server using apt-get, zypper, emerge or whatever package
+manager your flavor of Linux is using.
+
+Let's also start building our scripts to make the whole process easy and
+automatic, and we'll start with mounting/unmounting remote filesystem using sshfs:
+
+Mount script (e.g. *~/etc/backup/backup-mount*):
+
+{% highlight bash %}
+#!/bin/bash
+
+SSH_HOST="your.backup.host"
+SSH_PWD="password"
+
+echo "$SSH_PWD" | sshfs -o allow_other -o password_stdin $SSH_HOST: /mnt/backup
+{% endhighlight %}
+
+As you can see, the backup filesystem will be mounted under /mnt/backup. And
+if you can use non-password-based authentication (e.g. ssl certificates) - drop
+the password-related parts.
+
+And the script to unmount the filesystem is easy (*~/etc/backup/backup-umount*):
+
+{% highlight bash %}
+#!/bin/bash
+
+fusermount -uz /mnt/backup
+{% endhighlight %}
+
+h2. 1.2. Preparing remote image file
+
+Getting a bit ahead of myself, I'd say right now that we'll want to use hard
+links to optimize file data backups, and the hard links have one unwelcome
+property - they don't work on non-local filesystems.
+
+Still, if you don't want to back up massive amounts of files - you can safely skip
+this part, and just upload your backups directly to your remote host.
+But if you do have any non-trivial amount of files you want to have cheap
+incremental backups for - read on.
+
+To work around the limitation and make hard links available for us again, we're
+going to create an image file on the remote host, and mount that file locally
+via a loopback device. You can think of it as mounting a disk image, just not
+read-only, but in read-write mode.  The downside here is, of course, that you
+need to pre-allocate the disk space for your backups, but if you're using a
+fixed-size remote storage - it usually isn't a problem anyway.
+
+The process is easy. Let's start by creating the container file, that will
+hold our image. You need the file to be as big as the disk space required for
+the backups, and with that number handy - do the following:
+
+{% highlight bash %}
+dd if=/dev/zero of=backup-fs.image bs=1048076 count=500000
+{% endhighlight %}
+
+It will create a zero-filled file about 500GB big. If you need a different size -
+just tune the *count* parameter to your liking.
+
+The file, once created, is ready to accept the filesystem:
+
+{% highlight bash %}
+sudo /sbin/mke2fs backup-fs.image
+{% endhighlight %}
+
+That should take but a minute, and once it's done - let's get to the fun part,
+and test the image by trying to actually mount it. As it is not a real device,
+we're going to mount it using so-called
+"loop device":http://en.wikipedia.org/wiki/Loop_device - all it takes is
+one extra parameter to the mount command.
+
+{% highlight bash %}
+mount -o loop backup-fs.image /home/backup/storage
+{% endhighlight %}
+
+And voila - if everything went smoothly, you should see your image file mounted
+under /home/backup/storage, with a brand new and empty filesystem (probably
+showing _/lost+found_ dir only).
+
+Unmount that image now (simple *umount /home/backup/storage* should suffice),
+copy the image file to the remote host, and let's finish the mount/unmount
+scripts, and have them mount the image file as well:
+
+{% highlight bash %}
+#!/bin/bash
+
+SSH_HOST="your.backup.host"
+SSH_PWD="password"
+
+echo "$SSH_PWD" | sshfs -o allow_other -o password_stdin $SSH_HOST: /mnt/backup
+mount -o loop /mnt/backup/backup-fs.image /home/backup/storage
+chown backup /home/backup/storage
+{% endhighlight %}
+
+I'm assuming here that you're working with the backups as *backup* user, and
+the backup storage is being mounted in this user's home dir as
+*/home/backup/storage* - none of that is critical, so feel free to tweak these
+things to your liking.
+
+And the final unmounting script (still really simple):
+
+{% highlight bash %}
+#!/bin/bash
+
+umount -l /home/backup/storage
+fusermount -uz /mnt/backup
+{% endhighlight %}
+
+Notice the argument to both unmounts, though - they'll run in "lazy" mount,
+scheduling the filesystem for unmounting, but delaying the action if there's
+still any process holding onto the filesystem. That proved to be useful when
+dealing with non-local filesystems, as they sometimes keep writing after the
+previous command is done, and can not be unmounted right away - lazy umount
+deals with it just fine.
+
+h2. 1.3. Starting a cron job
+
+With image file created and uploaded, and the mounting/unmounting scripts in
+place, the cron job starts writing itself out (e.g. */etc/cron.daily/backup*):
+
+{% highlight bash %}
+#!/bin/bash
+
+/etc/backup/backup-mount
+# create new backup
+/etc/backup/backup-umount
+{% endhighlight %}
+
+With that, we're ready to move on to the actual backups. Stay tuned for part 2.
