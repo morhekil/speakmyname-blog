@@ -1,0 +1,233 @@
+---
+tags: devops, ruby, bash
+title: Automatic system backups with backup gem and some shell scripting - part 2, using backup gem
+layout: post
+excerpt: |-
+  In "part 1":/2013/05/13/automatic-backups-with-ruby-and-linux-shell-part-1/ of
+  this series we set up a remote image file as the backup storage, with some
+  extra scripts for easier operations.
+
+  Now, let's move on to actually backing up our data, using ruby backup gem.
+  I'll show you today how you can quickly and easily back up your database,
+  and essential small-to-medium-sized file directories.
+---
+
+In "part 1":/2013/05/13/automatic-backups-with-ruby-and-linux-shell-part-1/ of
+this series we set up a remote image file as the backup storage, with some extra
+scripts for easier operations.
+
+Now, let's move on to actually backing up our data. To make this job real easy,
+let's turn to the great ruby gem called, unsuprisingly,
+"backup":https://github.com/meskyanichi/backup .
+
+h2. 2.1. Installation
+
+In the recently released version 3.5.0 of the gem, the installation has been
+streamlined significantly.  If before that one had to install the gem,
+configure, than install all required dependencies with an extra command - now
+all you need to do is a single `gem install backup` command. It pulls in the
+gem itself, and all other gems it depends on - so just wait for it to finish,
+and you're ready to go.
+
+After that, you need to decide where to place the configuration files. By
+default, they go into @~/Backup@ directory of the user that is performing the
+backup - and that's disctinctly not a Unix-like place for them to be, but
+rather an OS X naming style. Still, it works, and for this tutorial we'll
+stick to the defaults here. If you want to change it - use @-c@ option when
+running a backup operation, e.g.:
+
+{% highlight bash %}
+backup --perform mybackup -c /etc/backup
+{% endhighlight %}
+
+h2. 2.2. First backup model - database
+
+The configuration of the backup gem is built around "models" - descriptions of
+the targets you'd like to backup, process, archive and store. In general,
+the backup process is split into the following phases:
+
+# Creating archives of the current data (e.g. database data or files) as intermediate files.
+# Packaging all archives together into a single tar file, and cleaning up all intermediate temp files when it's done.
+# Moving the package into its storage, and synchronizing the storage with an off-site location, if necessary.
+# Sending out notifications.
+
+It does sound like a lot of things to take care of, but backup gem makes it
+really easy by letting us build an initial model with a generator. Let's say
+I want to back up MySQL database, store it in the filesystem, rotating 5 copies
+of latest backups in there, have it compressed with gzip, and be notified by
+email every time the backup is created. Easy! Let's start by generating a model:
+
+{% highlight bash %}
+generate:model -t mysql_daily --storages="local" --compressors='gzip' --notifiers='mail' --databases='mysql' --no-splitter
+{% endhighlight %}
+
+If you run that, you should end up with an initial boilerplate model, that is
+very well commented, and can be used as a documentation of its own. Feel free
+to look around it and tinker with the details, and after some cleanup and
+changing the defaults you could end up with something like that:
+
+{% highlight ruby %}
+# encoding: utf-8
+Backup::Model.new(:mysql_daily, 'Daily mysql backup') do
+
+  database MySQL do |db|
+    db.name               = :all
+    db.username           = "my_username"
+    db.password           = "my_password"
+    db.host               = "127.0.0.1"
+    db.port               = 3306
+    db.additional_options = ["--quick", "--single-transaction"]
+  end
+
+  store_with Local do |local|
+    local.path       = "~/storage/"
+    local.keep       = 5
+  end
+
+  compress_with Gzip
+
+  notify_by Mail do |mail|
+    mail.on_success           = true
+    mail.on_warning           = true
+    mail.on_failure           = true
+
+    mail.delivery_method      = :sendmail
+    mail.to                   = "email@email.net"
+    mail.from                 = "backup@myserver.com"
+  end
+end
+{% endhighlight %}
+
+And that's it. With a single command and tinkering with some values, we ended
+up with a fully specified backup configuration. Just pay attention to that
+@local.path@ parameter - remember that image file from
+"part 1":/2013/05/13/automatic-backups-with-ruby-and-linux-shell-part-1/ ,
+that we're mounting into our filesystem? That's exactly where this backup is
+supposed to go. I set the mount point of the image file to @/home/backup/storage@
+before, so now I'm just pointing backup gem towards the same location. Make
+sure you do the same.
+
+Okay, enough talking, let's run it:
+{% highlight bash %}
+backup perform -t mysql_daily
+{% endhighlight %}
+
+And if everything was correct - you should end up with a database dump,
+neatly packaged and named for further storage.
+
+h2. 2.3. Second backup model - files
+
+With the database backup set up, let's move on to backing up essential local
+files. I'm going to illustrate the concept using the backup of @/etc@ directory
+of the server (which I personally prefer to back up as well), but the same
+technique can be applied to your application's data (e.g. uploaded files), and
+everything else you have stored in the filesystem.
+
+If you look again at the first backup model we created for the database, you could
+notice that the only part that mentions the database at all is the first
+@database@ block. This is called, obviously, a *database backup*, but for
+local files we're going to use *archive backup*.
+
+Let's generate its model:
+
+{% highlight bash %}
+generate:model -t etc --storages="local" --compressors='gzip' --notifiers='mail' --databases='mysql' --no-splitter
+{% endhighlight %}
+
+You should end up with the model that looks similar to the one we have before,
+but with an @archive@ block, instead of @database@. For /etc files backup, we
+could use the following configuration:
+
+{% highlight ruby %}
+archive :etc do |archive|
+  archive.use_sudo
+  archive.add "/etc/"
+end
+{% endhighlight %}
+
+So - storing @/etc@ directory, and using sudo to run the archive command. Once
+you've got past the basics of the gem operations - adding any amount of extra
+stuff shouldn't be a problem at all, and takes merely a minute.
+
+Let's do a test run of that as well:
+{% highlight bash %}
+backup perform -t etc
+{% endhighlight %}
+
+Hopefully, a backup of /etc is now staring right at you, and it's time
+to automate the whole process.
+
+h2. 2.4. Putting it all together - cron
+
+Of course, we don't want to log into the web server every day to run the backup.
+So let's use the good old cron to run the task for us instead. Many modern Linux
+distributions are coming with cron set up to run hourly/daily/weekly tasks
+automatically based on scripts dropped into /etc/cron.daily, /etc/cron.weekly etc.
+So the actual process of scheduling the backup is as easy as just writing a
+very simple bash script to orchestrate the whole process.
+
+Let's recount the steps we have so far:
+
+# Mount the backup image file under /home/backup/storage, using the script from part 1.
+# Create new backup packages.
+# Unmount the image.
+
+We already wrote steps 1 and 3 in part 1, so let's just build on top of that:
+
+{% highlight bash %}
+#!/bin/bash
+
+/etc/backup/backup-mount
+su - backup -c "cd ~ && backup perform --quiet -t etc,mysql_daily"
+/etc/backup/backup-umount
+{% endhighlight %}
+
+And that's it. Put this file into /etc/cron.daily, and tomorrow you will wake
+up to a couple of emails about successfully completed backups.
+
+h2. 2.5. Extra thoughts and tips
+
+h3. Using two separate backups models instead of a single model
+
+One might ask - why can't we put both @archive@ and @database@ blocks
+into the same backup model? Well, of course we can. But then we'll end up with
+the same package containing both database and file backups, and I personally
+dislike it, as it forces me to deal with much more data when I need to
+recover only a part of it. Having databases and files as two different models
+results in their packages being stored in separate directories, with each
+model's name as its backup directory name, very neat and accessible.
+
+If you prefer to have a single package - feel free to go that way, it will work
+just as well.
+
+h3. Keeping daily and weekly backups
+
+I like to keep daily and weekly database backups. Usually, a week's worth of
+daily backups, and about a month's worth of weekly ones. While it's always possible
+to just keep a 30 days of dailies, I find it being too much of a wasted disk space.
+
+Doing daily/weekly split is very easy - just create another script (e.g.
+mysql_weekly), that is basically the same as the daily one, except for the
+different trigger name. And copy bash script orchestrating the backup into
+/etc/cron.weekly, changing it to invoke weekly backup, instead of a daily one.
+
+Backup packages contain trigger names in them, so you'll end up with dailies
+and weekly neatly separated into different directories, and you can configure
+different rotation cycles for them, if you want to.
+
+h3. Further reading
+
+You can't go wrong with reading "wiki pages":https://github.com/meskyanichi/backup/wiki
+for backup gem - if you're going to read only two, make it
+"Getting Started":https://github.com/meskyanichi/backup/wiki/Getting-Started
+and "Technical Overview":https://github.com/meskyanichi/backup/wiki/Technical-Overview .
+That, especially after you read this post, should give you enough understanding
+of gem's workflows and operation basics.
+
+h3. Backing up huge file directories
+
+Be careful with using @archive@ option for really huge directories (like 100s thousands of files) - remember that every backup will be a complete copy of the
+directory, that will both take time to generate and disk space to store.
+
+In the next post you'll show you a more efficient way to deal with huge number
+of files, by doing incremental backups with rsync and hardlinks. Stay tuned.

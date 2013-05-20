@@ -40,6 +40,7 @@ a:hover { color: #e15119; }
 
 .post-content p { margin: 1em 0;}
 .post-content ol { list-style-type: decimal; margin-left: 2em; }
+.post-content code { background-color: #f2f5f7; padding: 0 0.5em }
 
 .post-footer { font-size: 0.8em; font-weight: 700; margin: 1em 0 2em;}
 
