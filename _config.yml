@@ -2,6 +2,7 @@ base_url: http://speakmy.name
 pygments: true
 lsi: true
 paginate: 10
+paginate_path: 'page:num'
 permalink: pretty
 redcloth:
   hard_breaks: false
