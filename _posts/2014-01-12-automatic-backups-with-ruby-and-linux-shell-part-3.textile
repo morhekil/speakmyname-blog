@@ -1,0 +1,87 @@
+---
+tags: devops, ruby, bash
+title: Automatic system backups with backup gem and some shell scripting - part 3, large file structures
+layout: post
+excerpt: |-
+  In "part 1":/2013/05/13/automatic-backups-with-ruby-and-linux-shell-part-1/
+  and "part 2":/2013/05/20/automatic-backups-with-ruby-and-linux-shell-part-2/ of
+  this series we set up a remote image file as the backup storage, and learned
+  how to use Backup gem to back up a database and small data directories.
+
+  In the final part, let's see how we can handle a backup of file directories
+  with a large number of files in them (as it is the case for many web sites),
+  and wrap it all up.
+---
+
+In "part 1":/2013/05/13/automatic-backups-with-ruby-and-linux-shell-part-1/
+and "part 2":/2013/05/20/automatic-backups-with-ruby-and-linux-shell-part-2/ of
+this series we set up a remote image file as the backup storage, and learned
+how to use Backup gem to back up a database and small data directories.
+
+But it leaves us with one more task - back up all this uploads, attachments,
+user pictures and other directories which quite often contain thousands,
+if not millions of files.
+
+It is possible to do it naively using Backup gem, of course, but by doing so
+we'll be wasting our disk space on storing multiple copies of the same data,
+not to mention compression these huge dirs can take quite some time.
+
+Thankfully, "rsync utility":http://rsync.samba.org/ has a very useful mode
+--link-dest, which we can use in this case.
+
+This technique is based on Mike Rubel's article
+"Easy Automated Snapshot-Style Backups with Linux and Rsync":http://www.mikerubel.org/computers/rsync_snapshots/
+If you're interested in a low-level explanation of all the details - make sure
+to read Mike's original.
+
+h2. Rsync and hard links for file directory backups
+
+h3. 3.1. Brief overview
+
+To solve the problem of efficiently backing up large number of files, let's
+turn to Linux's native concept of hard links. You might be very well familiar
+with soft links, as in @ln -s@ ones - for example, many deployment tools such
+as "capistrano":http://capistranorb.com are using them quite extensively.
+Soft links are "aliases" for files or directories elsewhere in the filesystem.
+But being merely an alias, they're becoming dead once the file they're linking
+to is gone (say, deleted).
+
+Unlike soft links, hard links are as good as the "original" file descriptor -
+which means that even if the file is deleted in its original place, as long
+as there are any hard links pointing to that file - it is still available
+via these links.
+
+Rsync, when running with @--link-dest=<DIR>@ argument, will examine the files
+it is transferring and compare them to the files in the given directory,
+and when an exact match is found - instead of copying the file, it will just
+hard link it to the existing one. That not only saves disk space when the
+snapshots are very similar, but also increases the backup speed, as rsync
+doesn't need to physically copy the files in these cases.
+
+h3. 3.2. Rsync backup script
+
+To make the process easier, I wrote a bash script that takes care of all
+the configuration and runtime details for the process. Grab a copy
+here: "https://gist.github.com/morhekil/8382294":https://gist.github.com/morhekil/8382294
+
+
+The only thing you need to change in the script is the configuration part,
+which is 4 lines in it's header - provide a path to rsync binary, sources and
+destination directories (with the latter being the mount path for the image
+we have set up in the previous parts), and how many backups you want to keep.
+The script will automatically be rotating the backups, and remove the ones
+which are falling out of the threshold.
+
+Download the file, set up the configuration, and you're good to go. You can
+always run it manually once to see what it is doing, or even use -n option
+to perform a dry-run - see the header of the script for the explanation of
+possible runtime arguments.
+
+h2. Putting it all together
+
+And that brings us to the end. You now know how to set up a remote image file
+as a container for your backups, how to use Backup gem to back up databases
+and simple files and directories, and how to use rsync to back up a really
+large file structures.
+
+Have any questions left? Feel free to ask them in the comments.
