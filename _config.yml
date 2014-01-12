@@ -7,6 +7,7 @@ permalink: pretty
 redcloth:
   hard_breaks: false
 exclude:
+  - s3_website.yml
   - tasks
   - Gemfile
   - Gemfile.lock
