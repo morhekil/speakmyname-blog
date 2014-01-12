@@ -23,7 +23,10 @@ title: SpeakMy.Name
       </div>
 
       <div class="post-footer">
-        <p><a href="{{ post.url }}#disqus_thread">read more and discuss</a></p>
+        <p>
+          <a href="{{ post.url }}">read more</a>
+          <a href="{{ post.url }}#disqus_thread"></a>
+        </p>
       </div>
     </div>
   {% endfor %}
