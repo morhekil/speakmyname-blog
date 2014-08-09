@@ -229,5 +229,7 @@ h3. Backing up huge file directories
 Be careful with using @archive@ option for really huge directories (like 100s thousands of files) - remember that every backup will be a complete copy of the
 directory, that will both take time to generate and disk space to store.
 
-In the next post you'll show you a more efficient way to deal with huge number
-of files, by doing incremental backups with rsync and hardlinks. Stay tuned.
+In "the next post":/2014/01/12/automatic-backups-with-ruby-and-linux-shell-part-3/
+I'm going to show you a more efficient way to deal with huge
+number of files, by doing incremental backups with rsync and hardlinks.
+Stay tuned.

@@ -1,0 +1,205 @@
+---
+tags: golang, http
+title: HTTP request debugging in Go with httputil
+layout: post
+excerpt: |-
+  Many tools and libraries which deal with HTTP requests provide means
+  to dump full request and response data for debug purposes. http package
+  in Go, by itself, does not provide this capability - but it can be easily
+  extended with httputil to do so.
+
+  Let's see how both packages work together.
+---
+
+Many tools and libraries which deal with HTTP requests provide means
+to dump full request and response data for debug purposes.
+"http":http://golang.org/pkg/net/http/ package in Go, by itself, does not
+provide this capability - but it can be easily extended with
+"httputil":http://golang.org/pkg/net/http/httputil/ to do so.
+
+Let's start with a textbook example of doing an HTTP request - say, querying
+"Vimeo's API":https://developer.vimeo.com/apis/simple:
+
+{% highlight go %}
+package main
+
+import (
+    "fmt"
+    "io/ioutil"
+    "log"
+    "net/http"
+)
+
+func main() {
+    response, err := http.Get("http://vimeo.com/api/v2/brad/info.json")
+    defer response.Body.Close()
+
+    if err != nil {
+        log.Fatalf("ERROR: %s", err)
+    }
+
+    body, err := ioutil.ReadAll(response.Body)
+    if err != nil {
+        log.Fatalf("ERROR: %s", err)
+    }
+
+    fmt.Printf("%s", body)
+}
+{% endhighlight %}
+
+Simple and straitforward enough. If you build and run it, you'll see something
+similar to this:
+
+{% highlight bash %}
+% ./http_example | json_pp
+{
+   "portrait_huge" : "http://i.vimeocdn.com/portrait/638116_300x300.jpg",
+   "videos_url" : "http://vimeo.com/brad/videos",
+   ... skipped most json data ...
+   "is_staff" : "1",
+   "portrait_small" : "http://i.vimeocdn.com/portrait/638116_30x30.jpg"
+}
+{% endhighlight %}
+
+Now, it's good when everything is working well, and all requests are being
+responded to with nice responses, but what to do when things are going south?
+Quite often, especially when debugging complicated API integrations,
+I need to see actual exchange of requests and responses between my code
+and the remote server.
+
+Of course, one could deploy an intercepting proxy, and watch all traffic there,
+but let's do something with Go itself - add some debugging output to the
+code. Thankfully, there's an "httputil":http://golang.org/pkg/net/http/httputil/
+package there that makes it quite simple.
+
+To allow for debugging, I need to unwrap Go's helpers just a little bit,
+and create a separate request object. And when I have that object, I can also
+start being more precise about request headers - so let's specify Content-Type,
+too:
+
+{% highlight go %}
+    url := "http://vimeo.com/api/v2/brad/info.json"
+    request, err := http.NewRequest("GET", url, nil)
+    if err == nil {
+        request.Header.Add("Content-Type", "application/json")
+    }
+{% endhighlight %}
+
+And now, to see that this new header is actually being sent, let's add the
+debugging output - httputil provides a number of functions for it, but I'll
+use "DumpRequestOut":http://golang.org/pkg/net/http/httputil/#DumpRequestOut
+to get the request, and
+"DumpResponse":http://golang.org/pkg/net/http/httputil/#DumpResponse
+to get the response.
+
+Let's start with the request:
+
+{% highlight go %}
+    url := "http://vimeo.com/api/v2/brad/info.json"
+    request, err := http.NewRequest("GET", url, nil)
+    if err == nil {
+        request.Header.Add("Content-Type", "application/json")
+        dump, err := httputil.DumpRequestOut(request, true)
+    }
+{% endhighlight %}
+
+And now I have a full dump of HTTP request I'm sending as ``dump`` byte slice.
+The same can be done for the response data, too, but I also need to modify
+the code a bit to use the prepared request:
+
+{% highlight go %}
+    response, err := (&http.Client{}).Do(request)
+
+    if err == nil {
+        defer response.Body.Close()
+        dump, err := httputil.DumpResponse(response, true)
+    }
+{% endhighlight %}
+
+Now it's start getting a bit too repetitive to me. As you can see, both
+dump functions return two value - the actual byte slice of dumped data, and
+an error. Let's do a simple wrapper function to handle it:
+
+{% highlight go %}
+func debug(data []byte, err error) {
+    if err == nil {
+        fmt.Printf("%s\n\n", data)
+    } else {
+        log.Fatalf("%s\n\n", err)
+    }
+}
+{% endhighlight %}
+
+It should print either an error, or the debug data nicely with some extra
+spacing at the end for readability. Putting it all together:
+
+{% highlight go %}
+package main
+
+import (
+    "fmt"
+    "io/ioutil"
+    "log"
+    "net/http"
+    "net/http/httputil"
+)
+
+func main() {
+    var body []byte
+    var response *http.Response
+    var request *http.Request
+
+    url := "http://vimeo.com/api/v2/brad/info.json"
+    request, err := http.NewRequest("GET", url, nil)
+    if err == nil {
+        request.Header.Add("Content-Type", "application/json")
+        debug(httputil.DumpRequestOut(request, true))
+        response, err = (&http.Client{}).Do(request)
+    }
+
+    if err == nil {
+        defer response.Body.Close()
+        debug(httputil.DumpResponse(response, true))
+        body, err = ioutil.ReadAll(response.Body)
+    }
+
+    if err == nil {
+        fmt.Printf("%s", body)
+    } else {
+        log.Fatalf("ERROR: %s", err)
+    }
+}
+
+func debug(data []byte, err error) {
+    if err == nil {
+        fmt.Printf("%s\n\n", data)
+    } else {
+        log.Fatalf("%s\n\n", err)
+    }
+}
+{% endhighlight %}
+
+Running it will produce a very helpful and thorough debug output of HTTP session:
+
+{% highlight bash %}
+% ./http_example
+GET /api/v2/brad/info.json HTTP/1.1
+Host: vimeo.com
+User-Agent: Go 1.1 package http
+Content-Type: application/json
+Accept-Encoding: gzip
+
+
+
+HTTP/1.1 200 OK
+Connection: close
+Accept-Ranges: bytes
+Access-Control-Allow-Origin: *
+Age: 1
+Connection: Keep-Alive
+Content-Type: application/json
+... etc ....
+{% endhighlight %}
+
+That is all. Got any questions left? Feel free to ask them in the comments
+below.

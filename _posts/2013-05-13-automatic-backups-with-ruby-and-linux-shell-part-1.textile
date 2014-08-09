@@ -23,7 +23,7 @@ independent parts:
 
 # Preparing your backup storage (this post).
 # "Using backup gem to create backups of the database and smaller directories":/2013/05/20/automatic-backups-with-ruby-and-linux-shell-part-2/
-# Using rsync to generate incremental backups of huge directories _(coming soon)_
+# "Using rsync to generate incremental backups of huge directories":/2014/01/12/automatic-backups-with-ruby-and-linux-shell-part-3/
 
 This is going to be a Linux-specific tutorial, as I do believe that you should
 be deploying your code on Linux servers. While it might work on OS X as well
