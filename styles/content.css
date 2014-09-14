@@ -17,7 +17,7 @@ pre {
   padding: 0.5em;
   background-color: #f2f5f7; border-left: 3px solid #C8CACD;
 }
-.highlight { position: relative; }
+.highlight { position: relative; font-size: 8pt; line-height: 1.5em; }
 .highlight .lineno { color: #999999; }
 
 .post p { text-align: justify; }
