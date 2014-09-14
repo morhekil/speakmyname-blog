@@ -1,0 +1,220 @@
+---
+tags: golang
+title: Modifying an interface{}-ed struct in Go via reflection
+layout: post
+excerpt: |-
+  As @interface{}@ is Go's go-to tool when accepting unknown types in a
+  function, sometimes we need to work on modify those types. One of the tasks
+  that comes up fairly often is to modify a field in a structure that was
+  passed into a function via interface{}-type parameter.
+
+  Let's see how we can do it easily.
+---
+
+Despite all my love for Go, there's one thing that I totally hate - its
+implementation of generics. I could go into the details of how awesome it would
+be with just a little bit of type classes (speaking in Haskell's terms),
+but Will Yager has already laid it out perfectly in his "Why Go Is Not Good":http://yager.io/programming/go.html
+article - so go read that one, if you're interested. But with that put aside,
+let's see how we can solve a problem of accepting and modifying a struct of
+unknown type in Go.
+
+h2. Prerequisites
+
+Go read "The Go Blog - The Laws of Reflection":http://blog.golang.org/laws-of-reflection.
+Seriously. Like right now. This page is not going anywhere anyway.
+
+I consider that article a prerequisite to the following discussion, so I assume
+that you're familiar with that, to keep things short. And you should be, if
+you're try to wring any reflection based code in Go.
+
+h2. Problem
+
+Ok, now to the actual problem. Let's say we have three different types of
+structures, like that:
+
+{% highlight go %}
+package main
+
+type Jaeger struct {
+    Name   string
+    Country string
+    Status string
+}
+
+type Kaiju struct {
+    Alias string
+    Origin string
+    Status string
+}
+
+type Shatterdome struct {
+    Location string
+}
+
+{% endhighlight %}
+
+And let's say we want to write @Destroy@ function, that takes any structure, and
+if that structure has "Status" field - changes this field to "Destroyed".
+If there's no "Status" field - nothing happens. So the func should look
+like this:
+
+{% highlight go %}
+func Destroy(subj interface{}) {
+    // something goes here
+}
+{% endhighlight %}
+
+We're dropping the parameter type down to @interface{}@, as the lowest common
+denominator for all possible structs, and now we need to find a way to
+detect the presense of that "Status" field, and to modify its value.
+
+And here is a simple test to verify our solution:
+
+{% highlight go %}
+package main
+
+import "testing"
+
+func TestDestroy(t *testing.T) {
+	// Initialize data
+	jaeger := Jaeger{Name: "Cherno Alpha", Country: "RU", Status: "Active"}
+	kaiju := Kaiju{Alias: "Scissure", Origin: "Sydney", Status: "Unknown"}
+	shatterdome := Shatterdome{Location: "Lima"}
+
+	// Destroy everything
+	Destroy(&jaeger)
+	Destroy(&kaiju)
+	Destroy(&shatterdome)
+
+	// Check the result
+	if jaeger.Status != "Destroy" {
+		t.Error("jaeger was not destroyed")
+	}
+	if kaiju.Status != "Destroy" {
+		t.Error("kaiju was not destroyed")
+	}
+}
+{% endhighlight %}
+
+Run it to see it failing:
+
+{% highlight bash %}
+% go test
+--- FAIL: TestDestroy (0.00 seconds)
+        destroy_test.go:18: jaeger was not destroyed
+        destroy_test.go:21: kaiju was not destroyed
+FAIL
+exit status 1
+{% endhighlight %}
+
+Now that we have the problem set up, and the test ready to verify the solution,
+let's work on one.
+
+h2. Solution
+
+As it turns out, this is actually fairly simple. The key thing here is that
+Go stored the original type of the struct in the memory together with the object
+data itself, so even when it is casted to an @interface{}@ - it doesn't lose
+the information about its original type, we just need to work a bit harder
+to get to it.
+
+And the way to get to it is to use "reflect":http://golang.org/pkg/reflect/
+package. More specifically, we need to do the following steps to get to
+the value of the field we need:
+
+# Get the actual struct value behind the @interface{}@, to reflect on.
+# Get a typed representation of that struct.
+# With that type in hand, check the existence of the field and modify it.
+
+Step 1 is required for any reflection - and it is as simple as a call to
+"@reflect.ValueOf(subj)@":http://golang.org/pkg/reflect/#ValueOf
+to retrieve the original "Value":http://golang.org/pkg/reflect/#Value.
+
+Next, to interrogate the type itself to find out which fields exist in it,
+we need to go from a generic @Value@, to the one with the right "Type":http://golang.org/pkg/reflect/#Type
+- and it is also as simple as adding @.Elem()@ call to the value representation.
+
+And from here on we have a full power of @reflect@ at our disposal. As it is
+possible that the field is missing,
+"@Value.IsValid()@":http://golang.org/pkg/reflect/#Value.IsValid
+call allows to find if this is the case, and if it isn't -
+"@Value.SetString(string)@":http://golang.org/pkg/reflect/#Value.SetString
+to actually change the field.
+
+Combining it all together, this is the final function:
+
+{% highlight go %}
+func Destroy(subj interface{}) {
+	stype := reflect.ValueOf(subj).Elem()
+	field := stype.FieldByName("Status")
+	if field.IsValid() {
+		field.SetString("Destroyed")
+	}
+}
+{% endhighlight %}
+
+Full solution with an example runner is available
+"on Go playground":http://play.golang.org/p/NyuPZonl7g
+
+h2. Importance of pointers
+
+If you were paying attention earlier, you might have noticed that it my
+test I used pointers in my calls to @Destroy()@ function:
+
+{% highlight go %}
+// Destroy everything
+Destroy(&jaeger)
+Destroy(&kaiju)
+Destroy(&shatterdome)
+{% endhighlight %}
+
+Why is that? Well, if you think of what we're trying to achieve (modify the
+original data structure) - it makes sense that it has to be passed in by
+reference, rather than copied by value, as the latter (even if it worked, which
+it doesn't) would result in the original struct being unchanged.
+
+But even more than that - @reflect@ will actually refuse to modify your data,
+if it is not passed in by reference. Consider the following simple example
+("playground link":http://play.golang.org/p/T0uJo1V8PV):
+
+{% highlight go %}
+package main
+
+import "fmt"
+import "reflect"
+
+type Jaeger struct {
+	Status string
+}
+
+func Check(subj interface{}) {
+	stype := reflect.ValueOf(subj)
+	field := stype.FieldByName("Status")
+	fmt.Printf("can be set? %+v\n", field.CanSet())
+}
+
+func main() {
+	jaeger := Jaeger{Status: "Active"}
+	Check(jaeger)
+}
+{% endhighlight %}
+
+If you run it, you'll get @"can be set? false"@. Why is that? Well, exactly
+because it was passed in by value as an @interface{}@ type - and modifying
+by-value copy of the original struct doesn't make much sense.
+
+h2. Summary
+
+Hopefull this clears some confusion around this, as I've seen people struggling
+with @reflect@ package in Go, and coming up with some overly complicated
+solutions to simple problems.
+
+Do you still have questions, or is there anything wrong in my post? Feel free
+to ask or correct me in the comments.
+
+h2. Work with me
+
+Or maybe you would like me to write code like this for you? I'm starting to
+look around for an interesting project to join, so you have one and want me to
+help you make it awesome - now is the perfect time to get in touch!
