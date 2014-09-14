@@ -1,0 +1,324 @@
+---
+tags: golang
+title: Go kata - generating random strings
+layout: post
+excerpt: |-
+  Let's look at a small exercise to generate a large number of unique
+  string codes. It turned out to be an interesting kata, with a number of
+  unexpected discoveries made along the way.
+
+  I'll also discuss a number of interesting points and tricks learned doing it.
+---
+
+I like doing katas and exercise to practice the skill - and I find it
+especially helpful when mastering a new language, as I'm doing now with Go.
+So today, when my better half asked me to help her with the launch of her
+project, I decided to reject the first instinct to do it in Ruby, and practice
+some Go instead. It turned out pretty well.
+
+The task was simple: generate 500,000 random promotional codes, to
+be uploaded into the database later. Codes should be 8 symbols long, and
+contain digits and uppercase letters. Similarly looking symbols should be
+removed - e.g. 0 and O, I and 1 are out.
+
+Simple enough. It would be easy enough to slap together some hacky script
+to do it and call it a day (and the version was actually quite like that),
+but let's approach it with the good design in mind, and make it a worthwhile
+exercise.
+
+The task is clearly could be split in two parts, with independent
+responsibilities: the logic of generating codes, and input/output interface.
+Let's start with the generator part.
+
+*_NB: full final code for this exercise is "available on GitHub":https://gist.github.com/morhekil/d96c922dd7fe000d518a_*
+
+h2. Generator
+
+I start with the basic structures describing the task:
+
+{% highlight go %}
+package generator
+
+// Task setup
+type Task struct {
+	Chars  string
+	Length int64
+}
+
+// Code represents generated codes
+type Code struct {
+	Index int
+	Value string
+}
+
+{% endhighlight %}
+
+And let's add a  constructor function, that returns a task structure with some
+sensible defaults. Start with a test here:
+
+{% highlight go %}
+package generator_test
+
+import (
+	"morhekil/training/randstr/generator"
+	"testing"
+)
+
+func TestNew(t *testing.T) {
+	task := generator.New()
+	if task.Length == 0 {
+		t.Errorf("length does not have default value")
+	}
+	if task.Chars == "" {
+		t.Errorf("chars does not have default value")
+	}
+}
+{% endhighlight %}
+
+The implementation is, of course, straightforward enough. I'm importing
+"uniuri":https://github.com/dchest/uniuri already here to use its values
+as the defaults:
+
+{% highlight go %}
+package generator
+
+// ... skipped earlier code ...
+
+// New task structure
+func New() Task {
+	return Task{
+		Chars:  string(uniuri.StdChars),
+		Length: uniuri.StdLen
+	}
+}
+{% endhighlight %}
+
+Ok, now that we're done with the boilerplate, let's get to the fun part. One
+here comes the first decision to make - how to actually pass the values back
+to the caller? I don't want to implement any kind of output in this package,
+as it isn't its concern, and I don't want to build out a full array of codes
+and pass it back - it will waste some memory that I don't want to be wasted.
+
+What else? In Ruby I would pass a lambda to the generator method, and let that
+lambda deal with the processing of generated codes. It way my first answer here,
+too, but then I remembered about channels. Channel is an effective to exactly
+this kind of problem, and it will let me to parallelise code generation and
+output.
+
+Ok, with this decision in mind - let's write a test for the generation part.
+
+{% highlight go %}
+package generator_test
+
+import (
+	"morhekil/training/randstr/generator"
+	"regexp"
+	"testing"
+)
+
+// ... skipped earlier code ...
+
+func TestGenerate(t *testing.T) {
+	codes := make(map[string]struct{})
+	var n int
+
+	task := generator.New()
+	task.Chars = "0123456789"
+	task.Length = 5
+
+	for code := range task.Generate(100) {
+		// Index received in order
+		if n != code.Index {
+			t.Fatalf("index %d received, %d expected", code.Index, n)
+		}
+		n++
+		// Code value is unique
+		if _, dup := codes[code.Value]; dup {
+			t.Fatalf("duplicate code %s received", code.Value)
+		}
+		// Code value has the right length
+		if len(code.Value) != int(task.Length) {
+			t.Fatalf("code %s has wrong length", code.Value)
+		}
+		// Code contains allowed characters only
+		if match, _ := regexp.Match("^["+task.Chars+"]+$$", []byte(code.Value)); !match {
+			t.Fatalf("code %s contains invalid characters", code.Value)
+		}
+
+		codes[code.Value] = struct{}{}
+	}
+	// Expected number of codes has been received
+	if n != 100 {
+		t.Errorf("expected 100 codes to be generated, got %d", n)
+	}
+}
+{% endhighlight %}
+
+The interesting thing to mention here is the duplication check. Often it is
+approached by adding all generated codes to an array, and testing every new
+code against that array to see if we have received it earlier. The problem
+with this approach is that arrays are really slow for a sequential search, so
+this algorithm brings a serious performance hit with it. The solution? Use map!
+Maps in Go are implemented as multilevel hash tables, so they can keep growing
+in memory as they need to, and stay effective for quick membership checks.
+
+The second trick, that complements the map lookup, is the use of empty struct
+for map values. Empty struct is an interesting data structure in Go, and one
+where Go's low-level optimisations really shine through again. It consumes
+no data storage, but it can be constructed, can be used to construct other
+types, and even can be used as a method receiver. Check out
+"The Empty Struct":http://dave.cheney.net/2014/03/25/the-empty-struct article
+by Dave Cheney to learn more, here I'll just point that a syntax to instantiate
+the empty struct looks like @struct{}{}@.
+
+Armed with this knowledge, let's start with the simple @Generate@ method,
+that is the public API for this operation:
+
+{% highlight go %}
+// Generate the given number of generated codes using the existing task setup.
+// Codes are printed to stdout, and progress count is printed to stderr
+func (task *Task) Generate(count int) (codes chan Code) {
+	codes = make(chan Code)
+	go task.generate(count, codes)
+	return
+}
+{% endhighlight %}
+
+It just creates a channel, fires off the generator to push values into the
+channel, and returns the channel back to the caller.
+
+And the rest of the private methods to generate the codes:
+
+{% highlight go %}
+// generate the given number of codes, and write them to the channel
+func (task *Task) generate(count int, codes chan Code) {
+	defer close(codes)
+
+	for i := 0; i < int(count); i++ {
+		codes <- Code{Index: i, Value: task.next()}
+	}
+}
+
+// next unique code according to the setup rules
+func (task *Task) next() (code string) {
+	for dup := true; dup; {
+		code = uniuri.NewLenChars(int(task.Length), []byte(task.Chars))
+		_, dup = task.codes[code]
+	}
+	task.codes[code] = struct{}{}
+	return
+}
+
+{% endhighlight %}
+
+Again, the only thing worth pointing our here is that loop construct - as Go
+does not have explicit while or until loops, but only a generalised for loop,
+I'm using the fact that map lookup returns the second boolean value to indicate
+an existence of the requested key. So feeding that back ntoto the for loop,
+and I've got the logic I need.
+
+You can find the final version of the generator code "on GitHub":https://gist.github.com/morhekil/d96c922dd7fe000d518a
+
+h2. CLI interface
+
+Now that I'm done with the logic that generates the codes, let's mode on to
+wrapping it into a nice command line interface.
+
+I'd like the tool to take three arguments - number of codes to generate,
+the length of the codes, and characters allowed in the codes. All three are
+mandatory.
+
+The tool will print generated codes into stdout, and will also display a
+progress count in stderr. It can be launched as @./randstr > res.csv@,
+and give a feedback about its progress as it generates the codes.
+
+Main function is quite simple:
+
+{% highlight go %}
+// main function parses command line arguments to get the number of codes
+// to generate, and invokes the generator
+func main() {
+	var count int
+	var err error
+	task := generator.New()
+
+	if count, err = setup(&task); err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+	for code := range task.Generate(count) {
+		fmt.Fprintf(os.Stderr, "%d\r", code.Index)
+		fmt.Fprintf(os.Stdout, "%s\n", code.Value)
+	}
+}
+{% endhighlight %}
+
+The channel interface that I built into the generator allows for a nice and
+clean separation of concerns here - my main function just receives codes
+as they are generated, and prints them out in any format it likes.
+
+@setup@ function parses the command line arguments, and configures the task
+accordingly:
+
+{% highlight go %}
+// New parses command line arguments and return task configuration
+func setup(task *generator.Task) (int, error) {
+	// Make sure we've got two CLI arguments, if we don't - print short help
+	if len(os.Args) < 4 {
+		return 0, errors.New("Usage: ./randstr <number_of_codes_to_generate> <length> <chars>")
+	}
+
+	// First argument should be an integer, goes for the number of codes
+	count, err := strconv.ParseInt(os.Args[1], 10, 0)
+	if err != nil {
+		return 0, errors.New("number of codes should be an integer")
+	}
+
+	// First argument should be an integer, goes for the number of codes
+	task.Length, err = strconv.ParseInt(os.Args[2], 10, 0)
+	if err != nil {
+		return 0, errors.New("code length should be an integer")
+	}
+
+	// Chars argument can be anything
+	task.Chars = os.Args[3]
+
+	return int(count), nil
+}
+{% endhighlight %}
+
+h2. Conclusion
+
+And that is all, folks! I'm quite happy with the final version of the code,
+as I managed to do a clean separation of concerns between generator and
+interface parts of the code, and I learned a trick with empty struct along
+the way.
+
+Is it overengineered? Well, for the simple task that I had at hand - yes,
+maybe, but the point of the exercise was to practice good code structure and
+design, so I'm happy with the final result being somewhat verbose.
+
+Here's the tool in action:
+
+{% highlight bash %}
+$ ./randstr
+Usage: ./randstr <number_of_codes_to_generate> <length> <chars>
+$ ./randstr 5 9 0123456789ABCDEF
+16D4A7117
+08AC29F77
+0417FBD92
+2B8F60C9F
+0B414D0BB
+{% endhighlight %}
+
+Full final code is "available on GitHub":https://gist.github.com/morhekil/d96c922dd7fe000d518a
+
+Do you think I've done something wrong? Or is there anything that isn't
+idiomatic Go in this code? I'd love to hear a critique and feedback over this
+exercise in the comments.
+
+h2. Work with me
+
+Or maybe you would like me to write code like this for you? I'm starting to
+look around for an interesting project to join, so you have one and want me to
+help you make it awesome - now is the perfect time to get in touch!
