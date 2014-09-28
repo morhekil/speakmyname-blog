@@ -1,5 +1,6 @@
 ---
 title: Simple configuration for Ruby applications
+tags: [ruby,rails]
 layout: post
 excerpt: |-
     Sometimes we don't really need a full-blown gem with a lot of bells and whistles, when a simple hand-made class worth a dozen of lines will do the job just as well, and even better - due to the cut off of extra external dependencies. And I believe that the task of keeping a set of configuration options or settings for the application can be implemented in such "lean" class quite often. Let's see in this post how it can be done.

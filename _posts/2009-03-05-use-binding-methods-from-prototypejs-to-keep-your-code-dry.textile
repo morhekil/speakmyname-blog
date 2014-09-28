@@ -1,8 +1,9 @@
---- 
+---
 wordpress_id: 173
 title: Use binding methods of prototype.js to keep your code DRY
 wordpress_url: http://speakmy.name/?p=173
 permalink: /2009/03/use-binding-methods-from-prototypejs-to-keep-your-code-dry/
+tags: [javascript]
 layout: post
 excerpt: |-
     There're two awesome methods in <a href="http://prototypejs.org">prototype.js</a> library those are often overlooked by newcomers - <a href="http://prototypejs.org/api/function/bind">Function.bind()</a> and <a href="http://prototypejs.org/api/function#method-bindaseventlistener">Function.bindAsEventListener</a>. These methods are so damn nice that their absense from another awsomeness called Ruby is just driving me crazy every time I stumble upon it.

@@ -1,8 +1,9 @@
---- 
+---
 wordpress_id: 115
 title: Using acl9 for easy object-based access control
 wordpress_url: http://speakmy.name/?p=115
 permalink: /2009/01/using-acl9-for-easy-object-based-access-control/
+tags: [rails,ruby]
 layout: post
 excerpt: |-
     There's a relatively new player in the town of *role-based access control for Rails* - <a href="http://github.com/be9/acl9">acl9</a> by Oleg Dashevskii. The first look through it's README page may leave a confusingly bitter taste of complexity in your mouth, but don't you worry - it's nice and flexible and easy to use once you get into it.

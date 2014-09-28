@@ -1,5 +1,5 @@
 ---
-tags: golang, http
+tags: [golang]
 title: HTTP request debugging in Go with httputil
 layout: post
 excerpt: |-

@@ -1,5 +1,5 @@
 ---
-tags: golang
+tags: [golang]
 title: Modifying an interface{}-ed struct in Go via reflection
 layout: post
 excerpt: |-

@@ -1,5 +1,5 @@
 ---
-tags: devops, ruby, bash
+tags: [devops,bash,ruby]
 title: Automatic system backups with backup gem and some shell scripting - part 3, large file structures
 layout: post
 excerpt: |-

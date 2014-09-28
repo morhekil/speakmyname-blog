@@ -1,6 +1,7 @@
---- 
+---
 wordpress_id: 106
 title: Action Guide to git submodules (with Rails flavor)
+tags: [rails,git]
 wordpress_url: http://speakmy.name/?p=106
 permalink: /2009/01/action-guide-to-git-submodules-with-rails-flavor/
 layout: post

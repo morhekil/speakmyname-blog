@@ -1,6 +1,7 @@
---- 
+---
 title: NTLM authentication for Ruby with Typhoeus and libcurl
 layout: post
+tags: [ruby,API]
 excerpt: |-
   A couple of times I've faced a problem of performing NTLM authentication from Ruby code. The issue here is that it's a proprietary Microsoft's authentication scheme, so it is a certain challenge for the developers to implement. After using different workarounds and proxies, I've moved on and implemented a proper solution that extends Typhoeus - networking library build upon libcurl.
 ---

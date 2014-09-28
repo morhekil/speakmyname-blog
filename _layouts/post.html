@@ -25,11 +25,11 @@
       <b>for you?</b> Do you have a <b>
         {% for tag in page.tags %}
           {% if forloop.last %}
-            {% if forloop.length == 1 %} {{ tag }}
-            {% else %} or {{ tag }}
+            {% if forloop.length == 1 %} {{ tag | capitalize }}
+            {% else %} or {{ tag | capitalize }}
             {% endif %}
           {% else %}
-            {{ tag }},
+            {{ tag | capitalize }},
           {% endif %}
         {% endfor %}
         project</b>, and need someone to help you make it awesome?

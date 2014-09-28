@@ -1,8 +1,9 @@
---- 
+---
 wordpress_id: 112
 title: Custom validation errors in Rails and ActiveRecord
 wordpress_url: http://speakmy.name/?p=112
-permalink: /2009/01/custom-validation-errors-in-rails-and-activerecord/ 
+permalink: /2009/01/custom-validation-errors-in-rails-and-activerecord/
+tags: [rails,ruby]
 layout: post
 excerpt: |-
     Looking around for the way to make custom validation errors for ActiveRecord I've found a number of different solution, including some quite complex ones those rewrite the helper to get required behavior messages. But it seems that the simplest possible way to do it is to rewrite _ActiveRecord::Errors#full_messages_ method.

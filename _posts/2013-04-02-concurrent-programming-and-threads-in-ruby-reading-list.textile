@@ -1,5 +1,6 @@
 ---
 title: Concurrent Programming and Threads in Ruby - a reading list
+tags: [ruby,concurrency,software architecture]
 layout: post
 excerpt: |-
   Many rubyists consider threads in Ruby as somewhat of an arcane knowledge, though in reality they're a very well researched and understood concept. Of course, writing effective multithreaded concurrent programs requires certain amount of knowledge and discipline from the programmer, but there's nothing that a smart one can't learn if he wants to.

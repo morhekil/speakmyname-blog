@@ -1,9 +1,10 @@
---- 
+---
 wordpress_id: 121
 title: Rails scaffold generator that uses RSpec, HAML and FactoryGirl
 wordpress_url: http://speakmy.name/?p=121
 permalink: /2009/02/rails-scaffold-generator-that-uses-rspec-haml-and-factorygirl/
 layout: post
+tags: [rails,ruby]
 excerpt: |-
     So you're using <a href="http://rspec.info">RSpec</a> for your specifications, <a href="http://haml.hamptoncatlin.com">HAML</a> for your views and <a href="http://www.thoughtbot.com/projects/factory_girl">Factory Girl</a> to build your test models (and maybe even <a href="http://github.com/technicalpickles/factory_girl_on_rails">Factory Girl on Rails</a> to quickly load 'em - it's nice, try it).
 
@@ -14,7 +15,7 @@ So you're using <a href="http://rspec.info">RSpec</a> for your specifications, <
 
 And everything is good and you feel good and you're sure that you're just damn good, but something is still bad... It's that damned default scaffold generator that comes with Rails and just doesn't want to use all that candy stuff, and instead builds those ugly mocks and pushes ERb templates here and there! And you have to rewrite your specs and templates every time, or maybe you've just stopped using that generator at all. So what do we do in these cases? Why, of course - we build our own generator!
 
-So here you go - grab that <a href="http://github.com/morhekil/factory_haml_rspec_scaffold/">Factory Haml RSpec Scaffold from GitHub</a> and put it as a plugin under your vendor/plugins directory. <a href="http://speakmy.name/2009/01/action-guide-to-git-submodules-with-rails-flavor/">Remember how to do it right? Of course - as a submodule!</a> 
+So here you go - grab that <a href="http://github.com/morhekil/factory_haml_rspec_scaffold/">Factory Haml RSpec Scaffold from GitHub</a> and put it as a plugin under your vendor/plugins directory. <a href="http://speakmy.name/2009/01/action-guide-to-git-submodules-with-rails-flavor/">Remember how to do it right? Of course - as a submodule!</a>
 
 {% highlight console %}
 $ git submodule add git://github.com/morhekil/factory_haml_rspec_scaffold.git vendor/plugins/factory_haml_rspec_scaffold

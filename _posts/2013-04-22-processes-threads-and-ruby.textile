@@ -1,5 +1,6 @@
 ---
 title: Processes, Threads and Ruby - Presentation Slides
+tags: [ruby,concurrency,software architecture]
 layout: post
 excerpt: |-
   Presentation from the talk that I gave at JN Solutions office on April, 2013. Gives an introduction into working with processes and threads in Ruby, together with a deeper look at some underlying differences between various Ruby versions and implementations.

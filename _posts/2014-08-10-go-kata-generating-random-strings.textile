@@ -1,5 +1,5 @@
 ---
-tags: golang
+tags: [golang]
 title: Go kata - generating random strings
 layout: post
 excerpt: |-

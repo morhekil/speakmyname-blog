@@ -1,6 +1,7 @@
---- 
+---
 wordpress_id: 68
 title: Long-running MySQL queries may bring you down in sudden ways
+tags: [mysql,data]
 wordpress_url: http://speakmy.name/?p=68
 permalink: /2008/11/long-running-mysql-queries-may-bring-you-down/
 layout: post
