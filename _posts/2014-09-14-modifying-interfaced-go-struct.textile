@@ -212,9 +212,3 @@ solutions to simple problems.
 
 Do you still have questions, or is there anything wrong in my post? Feel free
 to ask or correct me in the comments.
-
-h2. Work with me
-
-Or maybe you would like me to write code like this for you? I'm starting to
-look around for an interesting project to join, so you have one and want me to
-help you make it awesome - now is the perfect time to get in touch!

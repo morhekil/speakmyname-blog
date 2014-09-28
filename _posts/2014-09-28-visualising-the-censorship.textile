@@ -1,5 +1,5 @@
 ---
-tags: nodejs,javascript,firebase,data
+tags: [nodejs,javascript,firebase,data]
 title: Visualising the censorship - with NodeJS, Firebase, Tableau, and some client-side Javascript
 layout: post
 excerpt: |-

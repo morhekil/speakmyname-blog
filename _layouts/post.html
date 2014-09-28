@@ -1,4 +1,5 @@
 {% include header.html %}
+  <div id="wrapper">
     <div class="post">
         <div class="post-nav">
             <a href="/">&lt;&lt;&lt; back to the main page</a>
@@ -15,19 +16,41 @@
             {{ content }}
         </div>
     </div>
+  </div>
 
-    <div id="comments-wrapper">
-      <h3 id="comments-title">Comments</h3>
-      <div id="disqus_thread"></div>
-      <script type="text/javascript">
-        var disqus_shortname = 'speakmyname';
-        (function() {
-          var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
-          dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
-          (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
-        })();
-      </script>
-      <noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
-    </div>
+  <div id="announce-wrapper">
+    <h5>Work with me!</h5>
+    <p>
+      Would like me to do more work like what you're reading about on this blog
+      <b>for you?</b> Do you have a <b>
+        {% for tag in page.tags %}
+          {% if forloop.last %}
+            {% if forloop.length == 1 %} {{ tag }}
+            {% else %} or {{ tag }}
+            {% endif %}
+          {% else %}
+            {{ tag }},
+          {% endif %}
+        {% endfor %}
+        project</b>, and need someone to help you make it awesome?
+      I live in <b>Sydney (Australia)</b>, and I'm starting to look around for an
+      interesting project to join, so if you have one - now is the perfect time
+      to act!<br />
+      <a href="/contact">Get in touch, and let's talk!</a>
+  </div>
+
+  <div id="comments-wrapper">
+    <h3 id="comments-title">Comments</h3>
+    <div id="disqus_thread"></div>
+    <script type="text/javascript">
+      var disqus_shortname = 'speakmyname';
+      (function() {
+        var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+        dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+        (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+      })();
+    </script>
+    <noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+  </div>
 
 {% include footer.html %}
